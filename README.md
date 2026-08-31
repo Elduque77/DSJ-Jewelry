@@ -1,4 +1,5 @@
 # DSJ — E-commerce de joyería
+# usar wsl
 
 Proyecto Laravel 13 con entorno de desarrollo en Docker vía **Laravel Sail**.
 Los tres integrantes trabajamos contra exactamente la misma base de datos MySQL,
