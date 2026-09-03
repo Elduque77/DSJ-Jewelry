@@ -169,6 +169,19 @@ claves sí van en tu `.env` local y **nunca** en `.env.example`.
 
 ## 6. Problemas frecuentes
 
+**`php: command not found`, `composer: command not found`, o errores de extensiones PHP faltantes**
+En este proyecto **no se instala PHP ni Composer en tu máquina**: todo corre dentro del contenedor,
+que ya trae PHP 8.5 con todas las extensiones. Si ves alguno de esos errores, te faltó el prefijo `sail`:
+
+| En vez de… | Usa |
+|---|---|
+| `php artisan migrate` | `./vendor/bin/sail artisan migrate` |
+| `composer require paquete` | `./vendor/bin/sail composer require paquete` |
+| `npm run dev` | `./vendor/bin/sail npm run dev` |
+
+Aplica igual en Windows y en macOS. Si tenías un PHP instalado en el sistema, ignóralo: no es el
+que usa el proyecto y solo genera confusión.
+
 **`port is already allocated` al hacer `sail up`**
 Otro proceso ocupa el 80, 3307, 8080 o 5173. Cambia el puerto correspondiente en tu
 `.env` (`APP_PORT`, `FORWARD_DB_PORT`, `FORWARD_PHPMYADMIN_PORT`, `VITE_PORT`).
