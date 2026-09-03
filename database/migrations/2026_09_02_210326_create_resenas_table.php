@@ -20,12 +20,12 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('idCliente')
-                  ->references('idCliente')->on('clientes')
-                  ->onDelete('cascade');
+                ->references('idCliente')->on('clientes')
+                ->onDelete('cascade');
 
             $table->foreign('idProducto')
-                  ->references('idProducto')->on('productos')
-                  ->onDelete('cascade');
+                ->references('idProducto')->on('productos')
+                ->onDelete('cascade');
         });
 
         DB::statement('ALTER TABLE resenas ADD CONSTRAINT chk_calificacion CHECK (calificacion BETWEEN 1 AND 5)');

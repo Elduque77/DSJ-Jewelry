@@ -14,6 +14,7 @@ class Categoria extends Model
         'nombre',
         'descripcion',
     ];
+
     public function getIdCategoria(): int
     {
         return $this->idCategoria;
@@ -46,7 +47,7 @@ class Categoria extends Model
         return $this->hasMany(Producto::class, 'idCategoria', 'idCategoria');
     }
 
-    // --- Exponer la operación de negocio 
+    // --- Exponer la operación de negocio
 
     public function listarProductos(): Collection
     {

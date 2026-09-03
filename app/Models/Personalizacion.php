@@ -17,7 +17,6 @@ class Personalizacion extends Model
         'precioAdicional',
     ];
 
-
     public function getIdPersonalizacion(): int
     {
         return $this->idPersonalizacion;
