@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Autor: Samuel Correa Velasquez (Desarrollador)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
@@ -15,16 +19,10 @@ class Producto extends Model
      * $this->attributes['idCategoria'] - int - categoria a la que pertenece
      * $this->attributes['nombre'] - string - nombre del producto
      * $this->attributes['descripcion'] - string - descripcion del producto
-<<<<<<< HEAD
      * $this->attributes['material'] - string - material principal del producto
      * $this->attributes['precio'] - float - precio unitario sin personalizaciones
      * $this->attributes['stock'] - int - unidades disponibles
      * $this->categoria - Categoria - categoria del producto
-=======
-     * $this->attributes['material'] - string - material del producto
-     * $this->attributes['precio'] - decimal - precio unitario sin personalizaciones
-     * $this->attributes['stock'] - int - unidades disponibles
->>>>>>> bf2db36 (Se actualizaron los modelos para cumplir con las reglas planteadas por el arquitecto)
      * $this->personalizaciones - Collection - opciones de personalizacion asociadas
      */
     public $primaryKey = 'idProducto';
@@ -41,6 +39,11 @@ class Producto extends Model
     public function getIdProducto(): int
     {
         return $this->attributes['idProducto'];
+    }
+
+    public function getIdCategoria(): int
+    {
+        return $this->attributes['idCategoria'];
     }
 
     public function getNombre(): string

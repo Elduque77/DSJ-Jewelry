@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Autor: Samuel Correa Velasquez (Desarrollador)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
@@ -13,11 +17,7 @@ class Categoria extends Model
      * $this->attributes['idCategoria'] - int - clave primaria de la categoria
      * $this->attributes['nombre'] - string - nombre de la categoria
      * $this->attributes['descripcion'] - string - descripcion de la categoria
-<<<<<<< HEAD
      * $this->productos - Collection - productos pertenecientes a la categoria
-=======
-     * $this->productos - Collection - productos que pertenecen a la categoria
->>>>>>> bf2db36 (Se actualizaron los modelos para cumplir con las reglas planteadas por el arquitecto)
      */
     public $primaryKey = 'idCategoria';
 
@@ -60,7 +60,6 @@ class Categoria extends Model
     {
         return $this->productos;
     }
-
     public function listarProductos(): Collection
     {
         return $this->productos()->get();
