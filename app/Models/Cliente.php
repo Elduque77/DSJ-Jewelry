@@ -104,7 +104,7 @@ class Cliente extends Model
 
     public function getNombreCompleto(): string
     {
-        return $this->attributes['nombre'].' '.$this->attributes['apellido'];
+        return $this->attributes['nombre'] . ' ' . $this->attributes['apellido'];
     }
 
     public function resenas(): HasMany
