@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Autor: Samuel Correa Velasquez (Desarrollador)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

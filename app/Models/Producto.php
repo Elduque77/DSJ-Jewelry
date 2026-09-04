@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Autor: Samuel Correa Velasquez (Desarrollador)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
@@ -35,6 +39,11 @@ class Producto extends Model
     public function getIdProducto(): int
     {
         return $this->attributes['idProducto'];
+    }
+
+    public function getIdCategoria(): int
+    {
+        return $this->attributes['idCategoria'];
     }
 
     public function getNombre(): string

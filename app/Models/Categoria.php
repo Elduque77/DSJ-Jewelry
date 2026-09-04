@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Autor: Samuel Correa Velasquez (Desarrollador)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
@@ -56,7 +60,6 @@ class Categoria extends Model
     {
         return $this->productos;
     }
-
     public function listarProductos(): Collection
     {
         return $this->productos()->get();

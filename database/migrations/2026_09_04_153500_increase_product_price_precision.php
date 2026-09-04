@@ -12,16 +12,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('categorias', function (Blueprint $table) {
-            $table->increments('idCategoria'); // PK tipo INT autoincremental, como en el diagrama
-            $table->string('nombre');
-            $table->string('descripcion');
-            $table->timestamps();
+        Schema::table('productos', function (Blueprint $table): void {
+            $table->decimal('precio', 12, 2)->change();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('categorias');
+        Schema::table('productos', function (Blueprint $table): void {
+            $table->decimal('precio', 8, 2)->change();
+        });
     }
 };

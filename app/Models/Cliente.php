@@ -1,13 +1,17 @@
 <?php
 
+/**
+ * Autor: Diego (Arquitecto)
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 
-class Cliente extends Model
+class Cliente extends Authenticatable
 {
     /**
      * ATRIBUTOS DE CLIENTE
@@ -115,5 +119,13 @@ class Cliente extends Model
     public function getResenas(): Collection
     {
         return $this->resenas;
+    }
+
+    // Le dice al sistema de autenticacion de Laravel en que columna esta
+    // la contrasena cifrada, ya que aqui se llama "contrasena" y no
+    // "password" como espera el paquete por defecto.
+    public function getAuthPassword(): string
+    {
+        return $this->attributes['contrasena'];
     }
 }
