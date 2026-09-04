@@ -5,7 +5,7 @@
  */
 
 use App\Models\Cliente;
-use App\Models\Usuario;
+use App\Models\Administrador;
 
 return [
 
@@ -41,7 +41,7 @@ return [
 
         'admin' => [
             'driver' => 'session',
-            'provider' => 'usuarios',
+            'provider' => 'administradores',
         ],
     ],
 
@@ -57,9 +57,9 @@ return [
             'model' => Cliente::class,
         ],
 
-        'usuarios' => [
+        'administradores' => [
             'driver' => 'eloquent',
-            'model' => Usuario::class,
+            'model' => Administrador::class,
         ],
     ],
 

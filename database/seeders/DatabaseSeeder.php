@@ -6,7 +6,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Usuario;
+use App\Models\Administrador;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Usuario::updateOrCreate(
+        Administrador::updateOrCreate(
             ['correo' => 'admin1@gmail.com'],
             [
                 'nombre' => 'Administrador principal',

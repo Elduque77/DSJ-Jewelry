@@ -9,22 +9,22 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Hash;
 
-class Usuario extends Authenticatable
+class Administrador extends Authenticatable
 {
     /**
-     * ATRIBUTOS DE USUARIO
-     * $this->attributes['idUsuario'] - int - clave primaria del usuario administrador
+     * ATRIBUTOS DE ADMINISTRADOR
+     * $this->attributes['idAdministrador'] - int - clave primaria del administrador
      * $this->attributes['nombre'] - string - nombre del administrador
      * $this->attributes['correo'] - string - correo electronico, unico en la tabla
      * $this->attributes['contrasena'] - string - contrasena cifrada
      *
-     * Usuario representa exclusivamente a los administradores de la tienda.
+     * Administrador representa exclusivamente a los administradores de la tienda.
      * Se autentica con el guard "admin" (config/auth.php), independiente del
      * guard "cliente" que usa el modelo Cliente.
      */
-    public $table = 'usuarios';
+    public $table = 'administradores';
 
-    public $primaryKey = 'idUsuario';
+    public $primaryKey = 'idAdministrador';
 
     public $fillable = [
         'nombre',
@@ -36,9 +36,9 @@ class Usuario extends Authenticatable
         'contrasena',
     ];
 
-    public function getIdUsuario(): int
+    public function getIdAdministrador(): int
     {
-        return $this->attributes['idUsuario'];
+        return $this->attributes['idAdministrador'];
     }
 
     public function getNombre(): string
