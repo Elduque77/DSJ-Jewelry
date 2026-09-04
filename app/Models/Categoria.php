@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Categoria extends Model
 {
+    /**
+     * ATRIBUTOS DE CATEGORIA
+     * $this->attributes['idCategoria'] - int - clave primaria de la categoria
+     * $this->attributes['nombre'] - string - nombre de la categoria
+     * $this->attributes['descripcion'] - string - descripcion de la categoria
+     * $this->productos - Collection - productos pertenecientes a la categoria
+     */
     public $primaryKey = 'idCategoria';
 
     public $fillable = [
@@ -17,37 +24,38 @@ class Categoria extends Model
 
     public function getIdCategoria(): int
     {
-        return $this->idCategoria;
+        return $this->attributes['idCategoria'];
     }
 
     public function getNombre(): string
     {
-        return $this->nombre;
+        return $this->attributes['nombre'];
     }
 
     public function setNombre(string $nombre): void
     {
-        $this->nombre = $nombre;
+        $this->attributes['nombre'] = $nombre;
     }
 
     public function getDescripcion(): string
     {
-        return $this->descripcion;
+        return $this->attributes['descripcion'];
     }
 
     public function setDescripcion(string $descripcion): void
     {
-        $this->descripcion = $descripcion;
+        $this->attributes['descripcion'] = $descripcion;
     }
-
-    // --- Definir cómo se conecta con Producto
 
     public function productos(): HasMany
     {
         return $this->hasMany(Producto::class, 'idCategoria', 'idCategoria');
     }
 
-    // --- Exponer la operación de negocio
+    public function getProductos(): Collection
+    {
+        return $this->productos;
+    }
 
     public function listarProductos(): Collection
     {

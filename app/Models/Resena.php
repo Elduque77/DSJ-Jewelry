@@ -20,11 +20,11 @@ class Resena extends Model
      * $this->cliente - Cliente - autor de la resena
      * $this->producto - Producto - producto resenado
      */
-    protected $table = 'resenas';
+    public $table = 'resenas';
 
-    protected $primaryKey = 'idResena';
+    public $primaryKey = 'idResena';
 
-    protected $fillable = [
+    public $fillable = [
         'idCliente',
         'idProducto',
         'calificacion',

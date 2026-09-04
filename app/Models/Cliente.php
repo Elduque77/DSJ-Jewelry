@@ -20,9 +20,9 @@ class Cliente extends Model
      * $this->attributes['contrasena'] - string - contrasena cifrada
      * $this->resenas - Collection - resenas escritas por el cliente
      */
-    protected $primaryKey = 'idCliente';
+    public $primaryKey = 'idCliente';
 
-    protected $fillable = [
+    public $fillable = [
         'nombre',
         'apellido',
         'correo',
@@ -31,7 +31,7 @@ class Cliente extends Model
         'contrasena',
     ];
 
-    protected $hidden = [
+    public $hidden = [
         'contrasena',
     ];
 
