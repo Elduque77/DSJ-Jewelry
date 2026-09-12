@@ -24,6 +24,7 @@ class Producto extends Model
      * $this->attributes['stock'] - int - unidades disponibles
      * $this->categoria - Categoria - categoria del producto
      * $this->personalizaciones - Collection - opciones de personalizacion asociadas
+     * $this->resenas - Collection - resenas recibidas por el producto
      */
     public $primaryKey = 'idProducto';
 
@@ -114,6 +115,32 @@ class Producto extends Model
     public function getPersonalizaciones(): Collection
     {
         return $this->personalizaciones;
+    }
+
+    public function resenas(): HasMany
+    {
+        return $this->hasMany(Resena::class, 'idProducto', 'idProducto');
+    }
+
+    public function getResenas(): Collection
+    {
+        return $this->resenas;
+    }
+
+    public function getTotalResenas(): int
+    {
+        return $this->resenas->count();
+    }
+
+    // El promedio se calcula en PHP sobre la coleccion ya cargada. No se usa
+    // withAvg() porque en MySQL devuelve un string y obligaria a castear en la vista.
+    public function getPromedioCalificacion(): float
+    {
+        if ($this->resenas->isEmpty()) {
+            return 0.0;
+        }
+
+        return round((float) $this->resenas->avg('calificacion'), 1);
     }
 
     public function consultarDisponibilidad(): bool

@@ -6,6 +6,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use InvalidArgumentException;
@@ -106,6 +107,13 @@ class Resena extends Model
     public function setFecha(string $fecha): void
     {
         $this->attributes['fecha'] = $fecha;
+    }
+
+    // La fecha se guarda cruda como Y-m-d. Este helper existe para que las
+    // vistas no tengan que formatearla a mano.
+    public function getFechaFormateada(): string
+    {
+        return Carbon::parse($this->attributes['fecha'])->format('d/m/Y');
     }
 
     public function cliente(): BelongsTo
