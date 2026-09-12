@@ -4,8 +4,8 @@
  * Autor: Samuel Correa Velasquez (Desarrollador)
  */
 
-use App\Models\Cliente;
 use App\Models\Administrador;
+use App\Models\Cliente;
 
 return [
 

@@ -60,6 +60,7 @@ class Categoria extends Model
     {
         return $this->productos;
     }
+
     public function listarProductos(): Collection
     {
         return $this->productos()->get();
