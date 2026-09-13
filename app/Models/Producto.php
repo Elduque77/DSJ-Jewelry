@@ -2,10 +2,12 @@
 
 /**
  * Autor: Samuel Correa Velasquez (Desarrollador)
+ * Autor: Juan Fernando Duque (Desarrollador) - scopeBuscarPorNombre
  */
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -152,5 +154,14 @@ class Producto extends Model
     {
         $this->attributes['stock'] -= $cantidad;
         $this->save();
+    }
+
+    /**
+     * Se usa en HomeController para que el catálogo público filtre por
+     * coincidencia parcial de nombre sin traer todos los productos a memoria.
+     */
+    public function scopeBuscarPorNombre(Builder $query, string $nombre): Builder
+    {
+        return $query->where('nombre', 'like', '%'.trim($nombre).'%');
     }
 }
