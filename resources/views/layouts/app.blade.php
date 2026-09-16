@@ -5,27 +5,26 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'DSJ Jewelry' }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background: #f6f4f1; color: #292524; }
-        nav { background: #292524; padding: 1rem 2rem; }
-        nav a, nav button { color: white; margin-right: 1rem; text-decoration: none; background: none; border: 0; cursor: pointer; font-size: 1rem; }
-        main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
-        .card, form { background: white; padding: 1.25rem; border-radius: 8px; margin-bottom: 1rem; }
-        label { display: block; margin-top: .75rem; font-weight: bold; }
-        input, textarea, select { width: 100%; box-sizing: border-box; padding: .65rem; margin-top: .3rem; border: 1px solid #d6d3d1; border-radius: 4px; }
-        button, .button { display: inline-block; background: #57534e; color: white; border: 0; padding: .65rem 1rem; border-radius: 4px; text-decoration: none; cursor: pointer; margin-top: 1rem; }
-        .danger { background: #b91c1c; } .success { color: #166534; } .error { color: #b91c1c; }
-        table { width: 100%; border-collapse: collapse; background: white; } th, td { padding: .75rem; border-bottom: 1px solid #e7e5e4; text-align: left; }
+        body { margin: 0; }
+        main { max-width: 1180px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+        .card, form { background: var(--surface); padding: 1.25rem; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 1rem; }
+        label { display: block; margin-top: .75rem; font-weight: bold; color: var(--text); }
+        input, textarea, select { width: 100%; box-sizing: border-box; padding: .65rem; margin-top: .3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-soft); color: var(--text); }
+        button, .button { display: inline-block; background: var(--accent); color: var(--button-text); border: 0; padding: .65rem 1rem; border-radius: 4px; text-decoration: none; cursor: pointer; margin-top: 1rem; }
+        .danger { background: #a94442; color: #fff; } .success { color: #8fd1a6; } .error { color: #ef9a9a; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); color: var(--text); } th, td { padding: .75rem; border-bottom: 1px solid var(--line); text-align: left; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
         .paginacion { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: 1rem; }
-        .paginacion .pagina { padding: .4rem .7rem; border: 1px solid #d6d3d1; border-radius: 4px; background: white; color: #292524; text-decoration: none; }
-        .paginacion .pagina.actual { background: #57534e; border-color: #57534e; color: white; }
-        .paginacion .pagina.inactiva { color: #a8a29e; }
-        .paginacion-resumen { margin-left: auto; color: #78716c; font-size: .9rem; }
+        .paginacion .pagina { padding: .4rem .7rem; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); text-decoration: none; }
+        .paginacion .pagina.actual { background: var(--accent); border-color: var(--accent); color: var(--button-text); }
+        .paginacion .pagina.inactiva { color: var(--muted); }
+        .paginacion-resumen { margin-left: auto; color: var(--muted); font-size: .9rem; }
     </style>
 </head>
 <body>
-    <nav>
+    <nav class="site-nav">
         <a href="{{ route('home') }}">DSJ Jewelry</a>
         @auth('admin')
             <a href="{{ route('admin.dashboard') }}">Dashboard</a>
@@ -49,7 +48,7 @@
             @endauth
         @endif
     </nav>
-    <main>
+    <main class="site-main">
         @if (session('mensaje')) <p class="success">{{ session('mensaje') }}</p> @endif
         @if (session('error')) <p class="error">{{ session('error') }}</p> @endif
         @if ($errors->any())

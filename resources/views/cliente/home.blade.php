@@ -2,8 +2,24 @@
 {{-- Autor: Juan Fernando Duque (Desarrollador) - busqueda por nombre --}}
 @extends('layouts.app')
 @section('content')
-<h1>Joyería DSJ</h1>
-<p>Descubre nuestros productos.</p>
+<div class="home-page">
+    <section class="hero">
+        <div class="hero-copy">
+            <span class="eyebrow">Joyería con intención</span>
+            <h2>Detalles que permanecen.</h2>
+            <p>Descubre piezas seleccionadas para celebrar lo extraordinario, creadas para acompañarte hoy y siempre.</p>
+            <a class="hero-button" href="#coleccion">Ver piezas destacadas</a>
+        </div>
+        <div class="hero-jewel" aria-hidden="true"><span>✦</span></div>
+    </section>
+
+    <section class="collection-heading" id="coleccion">
+        <div>
+            <span class="eyebrow">Selección DSJ</span>
+            <h2>Piezas destacadas</h2>
+        </div>
+        <p>Una colección pensada para quienes buscan belleza, calidad y significado.</p>
+    </section>
 
 <section class="card">
     <h2>¿Necesitas ayuda para elegir?</h2>
@@ -69,5 +85,6 @@
             <p>No hay productos disponibles.</p>
         @endif
     @endforelse
+</div>
 </div>
 @endsection
