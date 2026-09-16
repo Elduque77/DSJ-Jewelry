@@ -10,4 +10,5 @@
 </td></tr>
 @empty <tr><td colspan="5">No hay productos.</td></tr>@endforelse
 </tbody></table>
+{{ $productos->links() }}
 @endsection

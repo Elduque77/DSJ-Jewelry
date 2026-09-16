@@ -10,4 +10,5 @@
 </td></tr>
 @empty <tr><td colspan="3">No hay categorías.</td></tr>@endforelse
 </tbody></table>
+{{ $categorias->links() }}
 @endsection

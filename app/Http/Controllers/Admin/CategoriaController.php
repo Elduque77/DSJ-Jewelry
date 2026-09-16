@@ -14,9 +14,13 @@ use Illuminate\View\View;
 
 class CategoriaController extends Controller
 {
+    // Los listados del panel se paginan para no cargar la tabla entera en
+    // memoria cuando el catalogo crezca.
+    private const POR_PAGINA = 10;
+
     public function index(): View
     {
-        $categorias = Categoria::all();
+        $categorias = Categoria::orderBy('nombre')->paginate(self::POR_PAGINA);
 
         return view('admin.categoria.index', [
             'categorias' => $categorias,
