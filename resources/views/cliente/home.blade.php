@@ -18,7 +18,7 @@
 <div class="grid">
     @forelse ($productos as $producto)
         <article class="card">
-            <h2>{{ $producto->getNombre() }}</h2>
+            <h2><a href="{{ route('producto.show', $producto) }}">{{ $producto->getNombre() }}</a></h2>
             <p>{{ $producto->getDescripcion() }}</p>
             <p><strong>Material:</strong> {{ $producto->getMaterial() }}</p>
             <p><strong>Precio:</strong> ${{ number_format($producto->getPrecio(), 2) }}</p>

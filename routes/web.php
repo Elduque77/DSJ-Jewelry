@@ -11,6 +11,8 @@ use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\ClienteAuthController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProductoPublicoController;
+use App\Http\Controllers\ResenaController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/producto/{producto}', [ProductoPublicoController::class, 'show'])->name('producto.show');
 
 Route::middleware('guest:cliente')->group(function (): void {
     Route::get('/login', [ClienteAuthController::class, 'mostrarLogin'])->name('cliente.login');
@@ -30,6 +33,7 @@ Route::middleware('guest:cliente')->group(function (): void {
 
 Route::middleware('auth:cliente')->group(function (): void {
     Route::post('/logout', [ClienteAuthController::class, 'logout'])->name('cliente.logout');
+<<<<<<< HEAD
     Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
 });
 
@@ -38,6 +42,12 @@ Route::prefix('carrito')->name('carrito.')->group(function (): void {
     Route::post('/agregar/{producto}', [CarritoController::class, 'agregar'])->name('agregar');
     Route::patch('/actualizar/{producto}', [CarritoController::class, 'actualizar'])->name('actualizar');
     Route::delete('/eliminar/{producto}', [CarritoController::class, 'eliminar'])->name('eliminar');
+=======
+
+    Route::post('/producto/{producto}/resena', [ResenaController::class, 'store'])->name('resena.store');
+    Route::put('/resena/{resena}', [ResenaController::class, 'update'])->name('resena.update');
+    Route::delete('/resena/{resena}', [ResenaController::class, 'destroy'])->name('resena.destroy');
+>>>>>>> origin/Development
 });
 
 /*
