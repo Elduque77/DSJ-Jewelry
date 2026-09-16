@@ -33,8 +33,10 @@ Route::middleware('guest:cliente')->group(function (): void {
 
 Route::middleware('auth:cliente')->group(function (): void {
     Route::post('/logout', [ClienteAuthController::class, 'logout'])->name('cliente.logout');
-<<<<<<< HEAD
-    Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
+ Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
+    Route::post('/producto/{producto}/resena', [ResenaController::class, 'store'])->name('resena.store');
+    Route::put('/resena/{resena}', [ResenaController::class, 'update'])->name('resena.update');
+    Route::delete('/resena/{resena}', [ResenaController::class, 'destroy'])->name('resena.destroy');
 });
 
 Route::prefix('carrito')->name('carrito.')->group(function (): void {
@@ -42,12 +44,7 @@ Route::prefix('carrito')->name('carrito.')->group(function (): void {
     Route::post('/agregar/{producto}', [CarritoController::class, 'agregar'])->name('agregar');
     Route::patch('/actualizar/{producto}', [CarritoController::class, 'actualizar'])->name('actualizar');
     Route::delete('/eliminar/{producto}', [CarritoController::class, 'eliminar'])->name('eliminar');
-=======
 
-    Route::post('/producto/{producto}/resena', [ResenaController::class, 'store'])->name('resena.store');
-    Route::put('/resena/{resena}', [ResenaController::class, 'update'])->name('resena.update');
-    Route::delete('/resena/{resena}', [ResenaController::class, 'destroy'])->name('resena.destroy');
->>>>>>> origin/Development
 });
 
 /*
