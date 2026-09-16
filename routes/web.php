@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::post('/recomendaciones', [HomeController::class, 'recomendar'])->name('recomendaciones');
 Route::get('/producto/{producto}', [ProductoPublicoController::class, 'show'])->name('producto.show');
 
 Route::middleware('guest:cliente')->group(function (): void {
