@@ -70,7 +70,7 @@
             <p><strong>Precio:</strong> ${{ number_format($producto->getPrecio(), 2) }}</p>
             <p><strong>Disponibles:</strong> {{ $producto->getStock() }}</p>
             @if ($producto->consultarDisponibilidad())
-                <form method="POST" action="{{ route('carrito.agregar', $producto->getIdProducto()) }}">
+                <form method="POST" action="{{ route('carrito.agregar', $producto->getIdProducto()) }}" style="background:none;padding:0;margin:0;border:none">
                     @csrf
                     <button type="submit">Agregar al carrito</button>
                 </form>

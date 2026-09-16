@@ -22,7 +22,7 @@
                     <td>{{ $linea['producto']->getNombre() }}</td>
                     <td>${{ number_format($linea['producto']->getPrecio(), 2) }}</td>
                     <td>
-                        <form method="POST" action="{{ route('carrito.actualizar', $linea['producto']->getIdProducto()) }}" style="display:flex;gap:.5rem;background:none;padding:0;margin:0">
+                        <form method="POST" action="{{ route('carrito.actualizar', $linea['producto']->getIdProducto()) }}" style="display:flex;gap:.5rem;background:none;padding:0;margin:0;border:none">
                             @csrf @method('PATCH')
                             <input type="number" name="cantidad" value="{{ $linea['cantidad'] }}" min="1" max="{{ $linea['producto']->getStock() }}" style="width:70px">
                             <button type="submit">Actualizar</button>
@@ -30,7 +30,7 @@
                     </td>
                     <td>${{ number_format($linea['subtotal'], 2) }}</td>
                     <td>
-                        <form method="POST" action="{{ route('carrito.eliminar', $linea['producto']->getIdProducto()) }}" style="background:none;padding:0;margin:0">
+                        <form method="POST" action="{{ route('carrito.eliminar', $linea['producto']->getIdProducto()) }}" style="background:none;padding:0;margin:0;border:none">
                             @csrf @method('DELETE')
                             <button type="submit" class="danger">Eliminar</button>
                         </form>
