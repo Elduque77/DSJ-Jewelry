@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\ClienteAuthController;
+use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,14 @@ Route::middleware('guest:cliente')->group(function (): void {
 
 Route::middleware('auth:cliente')->group(function (): void {
     Route::post('/logout', [ClienteAuthController::class, 'logout'])->name('cliente.logout');
+    Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
+});
+
+Route::prefix('carrito')->name('carrito.')->group(function (): void {
+    Route::get('/', [CarritoController::class, 'index'])->name('index');
+    Route::post('/agregar/{producto}', [CarritoController::class, 'agregar'])->name('agregar');
+    Route::patch('/actualizar/{producto}', [CarritoController::class, 'actualizar'])->name('actualizar');
+    Route::delete('/eliminar/{producto}', [CarritoController::class, 'eliminar'])->name('eliminar');
 });
 
 /*

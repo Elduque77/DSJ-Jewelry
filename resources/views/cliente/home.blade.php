@@ -23,6 +23,14 @@
             <p><strong>Material:</strong> {{ $producto->getMaterial() }}</p>
             <p><strong>Precio:</strong> ${{ number_format($producto->getPrecio(), 2) }}</p>
             <p><strong>Disponibles:</strong> {{ $producto->getStock() }}</p>
+            @if ($producto->consultarDisponibilidad())
+                <form method="POST" action="{{ route('carrito.agregar', $producto->getIdProducto()) }}">
+                    @csrf
+                    <button type="submit">Agregar al carrito</button>
+                </form>
+            @else
+                <p><em>Sin stock disponible</em></p>
+            @endif
         </article>
     @empty
         @if ($busqueda !== '')
