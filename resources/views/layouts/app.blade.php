@@ -38,6 +38,7 @@
             <a href="{{ route('admin.login') }}">Administración</a>
         @endauth
         @if (!auth('admin')->check())
+            <a href="{{ route('carrito.index') }}">Carrito</a>
             @auth('cliente')
                 <form method="POST" action="{{ route('cliente.logout') }}" style="display:inline;padding:0;background:none">
                     @csrf <button type="submit">Cerrar sesión</button>
@@ -50,6 +51,7 @@
     </nav>
     <main>
         @if (session('mensaje')) <p class="success">{{ session('mensaje') }}</p> @endif
+        @if (session('error')) <p class="error">{{ session('error') }}</p> @endif
         @if ($errors->any())
             <div class="error"><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
