@@ -17,6 +17,11 @@
         .danger { background: #b91c1c; } .success { color: #166534; } .error { color: #b91c1c; }
         table { width: 100%; border-collapse: collapse; background: white; } th, td { padding: .75rem; border-bottom: 1px solid #e7e5e4; text-align: left; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+        .paginacion { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: 1rem; }
+        .paginacion .pagina { padding: .4rem .7rem; border: 1px solid #d6d3d1; border-radius: 4px; background: white; color: #292524; text-decoration: none; }
+        .paginacion .pagina.actual { background: #57534e; border-color: #57534e; color: white; }
+        .paginacion .pagina.inactiva { color: #a8a29e; }
+        .paginacion-resumen { margin-left: auto; color: #78716c; font-size: .9rem; }
     </style>
 </head>
 <body>

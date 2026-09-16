@@ -8,6 +8,8 @@
     <p><strong>Material:</strong> {{ $producto->getMaterial() }}</p>
     <p><strong>Precio:</strong> ${{ number_format($producto->getPrecio(), 2) }}</p>
     <p><strong>Disponibles:</strong> {{ $producto->getStock() }}</p>
+
+    
     <a href="{{ route('home') }}">Volver al catálogo</a>
 </article>
 

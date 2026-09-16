@@ -15,9 +15,13 @@ use Illuminate\View\View;
 
 class ProductoController extends Controller
 {
+    // Los listados del panel se paginan para no cargar la tabla entera en
+    // memoria cuando el catalogo crezca.
+    private const POR_PAGINA = 10;
+
     public function index(): View
     {
-        $productos = Producto::with('categoria')->get();
+        $productos = Producto::with('categoria')->orderBy('nombre')->paginate(self::POR_PAGINA);
 
         return view('admin.producto.index', [
             'productos' => $productos,
