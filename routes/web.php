@@ -33,7 +33,7 @@ Route::middleware('guest:cliente')->group(function (): void {
 
 Route::middleware('auth:cliente')->group(function (): void {
     Route::post('/logout', [ClienteAuthController::class, 'logout'])->name('cliente.logout');
- Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
+    Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
     Route::post('/producto/{producto}/resena', [ResenaController::class, 'store'])->name('resena.store');
     Route::put('/resena/{resena}', [ResenaController::class, 'update'])->name('resena.update');
     Route::delete('/resena/{resena}', [ResenaController::class, 'destroy'])->name('resena.destroy');
