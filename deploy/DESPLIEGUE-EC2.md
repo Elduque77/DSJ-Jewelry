@@ -17,6 +17,7 @@ Datos **verificados** entrando a la instancia (17-sep-2026):
 | SELinux | `Permissive` (no estorba) |
 | `sudo` | Sin contraseña |
 | PHP disponible | **8.4.25** en los repos oficiales (cumple el `>= 8.4.1` que exige Symfony 8) |
+| Base de datos | **SQLite** — sin servidor de BD, para no gastar RAM en una instancia de 913 MiB |
 
 Para instancias Ubuntu existe la variante
 [DESPLIEGUE-EC2-ubuntu.md](DESPLIEGUE-EC2-ubuntu.md).
@@ -53,20 +54,27 @@ chmod 400 ~/.ssh/students.pem
 
 Desde PowerShell funciona igual, pero sin el `.pem`: `ssh -i students ec2-user@...`
 
-### b) El puerto 80 está cerrado — PENDIENTE
+### b) El puerto 80: era una falsa alarma
+
+Antes de instalar nada, esto parecía un bloqueo del security group:
 
 ```
 curl -I http://ec2-54-242-164-197.compute-1.amazonaws.com/
-→ Failed to connect ... port 80: Couldn't connect to server
+→ Failed to connect ... port 80 after 116 ms: Couldn't connect to server
 ```
 
-El security group no permite HTTP. **Aunque el despliegue quede perfecto, el
-sitio no será accesible** hasta que el dueño de la cuenta AWS agregue una regla
-de entrada:
+**No lo era.** El security group siempre permitió HTTP; lo que pasaba es que no
+había nada escuchando en el 80. En cuanto Nginx arrancó, el sitio respondió 200
+desde internet sin tocar ninguna regla de AWS.
 
-| Tipo | Protocolo | Puerto | Origen |
-|---|---|---|---|
-| HTTP | TCP | 80 | `0.0.0.0/0` |
+Cómo distinguir los dos casos, que es el detalle que me llevó a equivocarme:
+
+| Síntoma | Significado |
+|---|---|
+| `Couldn't connect` en **milisegundos** | El puerto llegó, pero nadie escucha (TCP RST). Es problema del servidor, no de AWS |
+| **Timeout** tras 10+ segundos | El security group descarta los paquetes. Ahí sí hay que abrir la regla en AWS |
+
+Los 116 ms de arriba eran un rechazo activo, no un filtrado.
 
 ### c) El disco es pequeño
 

@@ -32,7 +32,12 @@ return new class extends Migration
                 ->onDelete('cascade');
         });
 
-        DB::statement('ALTER TABLE resenas ADD CONSTRAINT chk_calificacion CHECK (calificacion BETWEEN 1 AND 5)');
+        // SQLite no admite ALTER TABLE ... ADD CONSTRAINT: solo acepta CHECK al
+        // crear la tabla. En ese motor la cota 1-5 queda a cargo de la
+        // validacion de la aplicacion (ResenaController: min:1, max:5).
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE resenas ADD CONSTRAINT chk_calificacion CHECK (calificacion BETWEEN 1 AND 5)');
+        }
     }
 
     public function down(): void
