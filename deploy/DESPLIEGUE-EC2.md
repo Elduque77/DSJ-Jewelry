@@ -1,0 +1,540 @@
+# Despliegue de DSJ en EC2 (Amazon Linux 2023)
+
+Guía para la instancia que nos compartieron:
+
+```
+ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+```
+
+Datos **verificados** entrando a la instancia (17-sep-2026):
+
+| | |
+|---|---|
+| SO | **Amazon Linux 2023** (`ID_LIKE=fedora`) → se usa `dnf`, usuario web `nginx`, servicio `php-fpm` |
+| Tipo | **t3.micro** — 913 MiB de RAM, 2 vCPU, disco de 8 GB (6,3 GB libres) |
+| Región | us-east-1 (`compute-1`) |
+| Estado | Limpia: solo corre `sshd`, sin servidor web ni base de datos, `/var/www` no existe |
+| SELinux | `Permissive` (no estorba) |
+| `sudo` | Sin contraseña |
+| PHP disponible | **8.4.25** en los repos oficiales (cumple el `>= 8.4.1` que exige Symfony 8) |
+| Base de datos | **SQLite** — sin servidor de BD, para no gastar RAM en una instancia de 913 MiB |
+
+Para instancias Ubuntu existe la variante
+[DESPLIEGUE-EC2-ubuntu.md](DESPLIEGUE-EC2-ubuntu.md).
+
+| Componente | En el servidor | Nota |
+|---|---|---|
+| PHP | **8.4** (`dnf install php8.4`) | AL2023 trae 8.1–8.5 en sus repos oficiales. **Obligatorio ≥ 8.4.1**: el `composer.lock` usa Symfony 8 |
+| MySQL | 8.4 LTS (repo de Oracle) | AL2023 **no** trae MySQL server; sí trae MariaDB. Usamos el repo oficial para igualar el `mysql:8.4` de desarrollo |
+| Nginx | del repo de AL2023 | Sitios en `/etc/nginx/conf.d/`, no en `sites-available` |
+| Node | 22 (vía NodeSource) | Solo si compilas assets en el servidor; el paso 8 explica cómo evitarlo. AL2023 solo trae Node 18, insuficiente para Vite 8 |
+
+La app no usa colas, tareas programadas, correo ni subida de archivos, así que
+**no** hace falta worker, cron de Laravel ni `php artisan storage:link`.
+
+---
+
+## Paso 0 — Dos bloqueos que dependen de quien creó la instancia
+
+Lo comprobé desde fuera y ninguno se resuelve desde tu lado:
+
+### a) La llave: RESUELTO
+
+La llave es `C:\Users\diego\arq.software\students` — **sin extensión `.pem`**,
+de ahí el `No such file or directory` al usar `-i students.pem`. Es una RSA de
+2048 bits en formato PEM.
+
+Copiada a WSL con los permisos que exige OpenSSH (desde `/mnt/c` no sirve,
+porque ese montaje es `0777` y la llave se ignora):
+
+```bash
+cp /mnt/c/Users/diego/arq.software/students ~/.ssh/students.pem
+chmod 400 ~/.ssh/students.pem
+```
+
+Desde PowerShell funciona igual, pero sin el `.pem`: `ssh -i students ec2-user@...`
+
+### b) El puerto 80: era una falsa alarma
+
+Antes de instalar nada, esto parecía un bloqueo del security group:
+
+```
+curl -I http://ec2-54-242-164-197.compute-1.amazonaws.com/
+→ Failed to connect ... port 80 after 116 ms: Couldn't connect to server
+```
+
+**No lo era.** El security group siempre permitió HTTP; lo que pasaba es que no
+había nada escuchando en el 80. En cuanto Nginx arrancó, el sitio respondió 200
+desde internet sin tocar ninguna regla de AWS.
+
+Cómo distinguir los dos casos, que es el detalle que me llevó a equivocarme:
+
+| Síntoma | Significado |
+|---|---|
+| `Couldn't connect` en **milisegundos** | El puerto llegó, pero nadie escucha (TCP RST). Es problema del servidor, no de AWS |
+| **Timeout** tras 10+ segundos | El security group descarta los paquetes. Ahí sí hay que abrir la regla en AWS |
+
+Los 116 ms de arriba eran un rechazo activo, no un filtrado.
+
+### c) El disco es pequeño
+
+8 GB en total, 6,3 GB libres. Alcanza, pero es un motivo más para **no**
+instalar Node ni compilar en el servidor (ver paso 8): `node_modules` de este
+proyecto pesa cientos de MB.
+
+> **Ojo con el nombre DNS:** `ec2-54-242-164-197...` es el DNS público
+> automático y **cambia si la instancia se detiene y se vuelve a encender**.
+> Si eso pasa, hay que actualizar `APP_URL`. Para evitarlo, pide que le asignen
+> una **Elastic IP**.
+
+---
+
+## Paso 1 — Conectarse
+
+```bash
+ssh -i ~/.ssh/students.pem ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+```
+
+Todo lo que sigue va dentro de la instancia. La llave se llama `students`, así
+que es de la materia y **puede estar compartida con otros compañeros**. Ya
+verifiqué que hoy está limpia, pero conviene repetir la comprobación antes de
+instalar, por si alguien desplegó algo en el entretanto:
+
+```bash
+sudo systemctl list-units --type=service --state=running | grep -iE "nginx|httpd|apache|php|mysql|maria|docker"
+sudo ss -tlnp | grep -E ':(80|443|3306|8080)\b'
+ls /var/www 2>/dev/null
+```
+
+Si ahí aparece Apache (`httpd`) o algo sirviendo en el 80, **pregunta antes de
+seguir**: instalar Nginx le quitaría el puerto a lo que ya esté desplegado.
+
+---
+
+## Paso 2 — Actualizar y paquetes base
+
+```bash
+sudo dnf update -y
+sudo dnf install -y nginx git tar unzip rsync
+```
+
+---
+
+## Paso 3 — Swap (OBLIGATORIO: la instancia tiene 913 MiB y cero swap)
+
+```bash
+sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+```
+
+> En Amazon Linux se usa `dd` en lugar de `fallocate`: el swap sobre un archivo
+> con huecos (*sparse*) que crea `fallocate` puede fallar al activarse.
+
+---
+
+## Paso 4 — PHP 8.4
+
+Primero mira qué hay disponible (los nombres son versionados, tipo `php8.4-fpm`):
+
+```bash
+dnf list available 'php8.4*' | head -40
+```
+
+Instala:
+
+```bash
+sudo dnf install -y php8.4 php8.4-fpm php8.4-cli php8.4-common \
+    php8.4-mysqlnd php8.4-pdo php8.4-mbstring php8.4-xml php8.4-intl \
+    php8.4-gd php8.4-bcmath php8.4-opcache
+php -v          # debe decir 8.4.x (>= 8.4.1)
+php -m | sort   # verifica: pdo_mysql, mbstring, intl, bcmath, dom, curl, openssl
+```
+
+> Si algún nombre de la lista no existe en tu versión de AL2023, quítalo del
+> comando y vuelve a intentar; lo mínimo indispensable es
+> `php8.4 php8.4-fpm php8.4-mysqlnd php8.4-mbstring php8.4-xml`.
+>
+> Si `php -m` no muestra `zip`, no pasa nada: Composer usa el binario `unzip`
+> que instalamos en el paso 2.
+
+---
+
+## Paso 5 — Composer
+
+```bash
+curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+sudo php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
+composer -V
+```
+
+---
+
+## Paso 6 — Base de datos: SQLite
+
+Es lo que está desplegado hoy. En una instancia de 913 MiB, no levantar un
+servidor de base de datos libera ~200-400 MiB para Nginx y PHP. No hace falta
+instalar nada: **`php8.4-pdo` ya incluye `pdo_sqlite.so` y `sqlite3.so`**.
+
+El archivo se crea con el mismo comando que trae `composer.json` en
+`post-create-project-cmd`:
+
+```bash
+cd /var/www/dsj
+php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+```
+
+Y en el `.env`, con **ruta absoluta**:
+
+```
+DB_CONNECTION=sqlite
+DB_DATABASE=/var/www/dsj/database/database.sqlite
+DB_FOREIGN_KEYS=true
+```
+
+Activa WAL, que mejora bastante la concurrencia de lecturas y escrituras. Es
+una propiedad **persistente** del archivo: se ejecuta una sola vez.
+
+```bash
+sudo dnf install -y sqlite     # solo el cliente de linea de comandos
+sqlite3 database/database.sqlite "PRAGMA journal_mode=WAL;"   # responde: wal
+```
+
+### Tres detalles de SQLite que cuestan tiempo si no los sabes
+
+1. **El directorio tiene que ser escribible, no solo el archivo.** En WAL,
+   SQLite crea `database.sqlite-wal` y `-shm` junto al archivo. Si
+   `database/` no es escribible por `nginx`, hasta un `SELECT` falla con
+   `attempt to write a readonly database`. De ahí el `chmod 775` del paso 11.
+
+2. **Esos `-wal`/`-shm` desaparecen solos** cuando se cierra la última
+   conexión. No verlos en `ls` es normal, no significa que falten.
+
+3. **`sqlite3` como `ec2-user` da `readonly database`.** No es un fallo del
+   despliegue: el archivo es de `nginx`. Para consultarlo usa
+   `sudo -u nginx sqlite3 database/database.sqlite "..."`.
+
+### Migración de la migración de reseñas
+
+`2026_09_02_210326_create_resenas_table.php` hacía
+`ALTER TABLE resenas ADD CONSTRAINT ... CHECK`, que **SQLite no soporta** (solo
+acepta CHECK dentro del CREATE TABLE). Se ajustó para aplicarla solo en motores
+que la admiten; en SQLite la cota 1-5 la garantiza la validación del
+controlador. Sin ese cambio, `php artisan migrate` se detiene ahí.
+
+<details>
+<summary>Alternativa: MySQL 8.4 (si algún día hace falta paridad con Sail)</summary>
+
+AL2023 no trae MySQL server en sus repos (solo MariaDB 10.5/10.11/11.4), así que
+se agrega el de Oracle:
+
+```bash
+sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
+sudo dnf install -y https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
+sudo dnf install -y mysql-community-server php8.4-mysqlnd
+sudo systemctl enable --now mysqld
+sudo grep 'temporary password' /var/log/mysqld.log
+sudo mysql_secure_installation
+```
+
+```bash
+mysql -u root -p <<'SQL'
+CREATE DATABASE dsj CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'dsj'@'127.0.0.1' IDENTIFIED BY 'CAMBIA_ESTA_PASSWORD';
+GRANT ALL PRIVILEGES ON dsj.* TO 'dsj'@'127.0.0.1';
+FLUSH PRIVILEGES;
+SQL
+```
+
+Con 913 MiB hay que bajarle la memoria o se pelea con PHP-FPM:
+
+```bash
+sudo tee /etc/my.cnf.d/zz-dsj-small.cnf >/dev/null <<'CNF'
+[mysqld]
+innodb_buffer_pool_size = 128M
+innodb_log_buffer_size  = 16M
+max_connections         = 30
+performance_schema      = OFF
+CNF
+sudo systemctl restart mysqld
+```
+
+En el `.env`: `DB_CONNECTION=mysql`, `DB_HOST=127.0.0.1`, `DB_DATABASE=dsj`,
+`DB_USERNAME=dsj`, `DB_PASSWORD=...`. MariaDB funciona igual con
+`DB_CONNECTION=mariadb`, que tiene driver propio en Laravel.
+</details>
+
+## Paso 7 — Traer el código
+
+```bash
+sudo mkdir -p /var/www
+sudo git clone https://github.com/<usuario>/<repo>.git /var/www/dsj
+sudo git -C /var/www/dsj checkout Diego     # o la rama que vayas a desplegar
+sudo chown -R nginx:nginx /var/www/dsj
+```
+
+Si el repo es privado, usa una *deploy key* de solo lectura:
+
+```bash
+sudo mkdir -p /var/www/.ssh && sudo chown nginx:nginx /var/www/.ssh
+sudo -u nginx -H ssh-keygen -t ed25519 -f /var/www/.ssh/id_ed25519 -N "" -C "ec2-dsj"
+sudo cat /var/www/.ssh/id_ed25519.pub
+```
+
+Esa clave pública va en GitHub → repo → **Settings → Deploy keys**, y luego
+clonas con la URL SSH (`git@github.com:<usuario>/<repo>.git`).
+
+---
+
+## Paso 8 — Los assets de Vite: compílalos en tu máquina
+
+`public/build/` está en `.gitignore`, así que hay que generarlo.
+
+> **Lo que pasó en la práctica:** ni WSL ni la instancia tenían Node (el
+> proyecto lo usaba dentro del contenedor de Sail), y `apt` en WSL solo ofrece
+> Node 18. Así que se instaló Node 22 en la instancia vía NodeSource y se
+> compiló allí: **tardó 362 ms** y ni se notó en la memoria. El frontend son 3
+> módulos, no un SPA. El miedo al OOM estaba exagerado para este proyecto.
+
+Si prefieres no tener Node en el servidor, compílalo donde sí lo tengas y súbelo:
+
+```bash
+# en tu máquina, dentro de /home/diego/DSJ
+npm ci && npm run build
+rsync -avz -e "ssh -i ~/.ssh/students.pem" public/build/ \
+    ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com:/tmp/build/
+```
+
+Y en el servidor:
+
+```bash
+sudo rsync -a --delete /tmp/build/ /var/www/dsj/public/build/
+sudo chown -R nginx:nginx /var/www/dsj/public/build
+```
+
+Así te ahorras Node en el servidor y el riesgo de que `npm run build` muera por
+falta de memoria (es lo que más RAM consume de todo el despliegue).
+
+<details>
+<summary>Alternativa: compilar en el servidor</summary>
+
+**No sirve el `nodejs` de los repos de AL2023: solo hay 18.20.8**, y Vite 8
+exige `^20.19 || >=22.12`. Hay que usar NodeSource:
+
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+sudo dnf install -y nodejs
+node -v   # tiene que ser >= 22.12
+sudo mkdir -p /var/www/.npm && sudo chown nginx:nginx /var/www/.npm
+cd /var/www/dsj
+sudo -u nginx -H npm_config_cache=/var/www/.npm npm ci --ignore-scripts
+sudo -u nginx -H npm_config_cache=/var/www/.npm npm run build
+```
+</details>
+
+---
+
+## Paso 9 — Configurar el `.env`
+
+```bash
+sudo cp /var/www/dsj/deploy/.env.production.example /var/www/dsj/.env
+sudo nano /var/www/dsj/.env
+```
+
+Rellena:
+- `APP_URL=http://ec2-54-242-164-197.compute-1.amazonaws.com` (sin barra final)
+- `DB_PASSWORD=` la del paso 6
+- `GEMINI_API_KEY=` tu clave (solo aplica si despliegas una rama que ya tenga
+  la integración con Gemini; en `Diego` ese servicio todavía no existe)
+
+Protégelo, que lleva credenciales:
+
+```bash
+sudo chown nginx:nginx /var/www/dsj/.env
+sudo chmod 640 /var/www/dsj/.env
+```
+
+> `APP_DEBUG` viene en `false`. **Déjalo así**: en `true`, cualquier error
+> muestra el `.env` completo —contraseñas y API key incluidas— a quien visite
+> el sitio.
+
+---
+
+## Paso 10 — Dependencias PHP, clave, migraciones y cachés
+
+El orden importa: `key:generate` escribe en `.env`, así que va **antes** de
+cachear la configuración.
+
+```bash
+sudo mkdir -p /var/www/.composer && sudo chown nginx:nginx /var/www/.composer
+cd /var/www/dsj
+
+sudo -u nginx -H COMPOSER_HOME=/var/www/.composer \
+    composer install --no-dev --optimize-autoloader --no-interaction
+
+sudo -u nginx php artisan key:generate --force
+sudo -u nginx php artisan migrate --force --seed
+
+sudo -u nginx php artisan config:cache
+sudo -u nginx php artisan route:cache
+sudo -u nginx php artisan view:cache
+sudo -u nginx php artisan event:cache
+```
+
+`--seed` crea el catálogo de demostración y el administrador
+`admin1@gmail.com` / `12345678`. **Cambia esa contraseña** antes de dejar el
+sitio público.
+
+---
+
+## Paso 11 — Permisos
+
+```bash
+sudo chown -R nginx:nginx /var/www/dsj
+sudo find /var/www/dsj -type d -exec chmod 755 {} +
+sudo find /var/www/dsj -type f -exec chmod 644 {} +
+sudo chmod -R 775 /var/www/dsj/storage /var/www/dsj/bootstrap/cache
+# SQLite: el DIRECTORIO tambien, para que pueda crear los -wal/-shm
+sudo chmod 775 /var/www/dsj/database
+sudo chmod 664 /var/www/dsj/database/database.sqlite
+sudo chmod 640 /var/www/dsj/.env
+sudo chmod +x /var/www/dsj/artisan /var/www/dsj/deploy/deploy.sh
+```
+
+`storage/` y `bootstrap/cache/` son los únicos directorios donde Laravel
+escribe. Si `nginx` no puede escribir ahí, el sitio responde 500.
+
+---
+
+## Paso 12 — Nginx y PHP-FPM
+
+```bash
+sudo cp /var/www/dsj/deploy/php-fpm-dsj-amazonlinux.conf /etc/php-fpm.d/zz-dsj.conf
+sudo mkdir -p /var/log/php-fpm && sudo chown nginx:nginx /var/log/php-fpm
+sudo systemctl enable --now php-fpm
+sudo systemctl restart php-fpm
+
+sudo cp /var/www/dsj/deploy/nginx/dsj-amazonlinux.conf /etc/nginx/conf.d/dsj.conf
+sudo nginx -t
+sudo systemctl enable --now nginx
+sudo systemctl reload nginx
+```
+
+> **Detalle que muerde en Amazon Linux:** el pool de PHP-FPM viene configurado
+> para correr como usuario `apache`, no `nginx`. El archivo
+> `zz-dsj.conf` lo cambia a `nginx` para que un solo usuario sea dueño de todo.
+> Sin eso, PHP escribiría en `storage/` como `apache` y tendrías errores de
+> permisos difíciles de rastrear.
+
+Revisa SELinux (AL2023 normalmente viene en `permissive`, que no estorba):
+
+```bash
+getenforce
+```
+
+Si dijera `Enforcing` y tuvieras 403/502 sin causa aparente:
+
+```bash
+sudo setsebool -P httpd_can_network_connect 1
+sudo chcon -R -t httpd_sys_rw_content_t /var/www/dsj/storage
+```
+
+---
+
+## Paso 13 — Verificar
+
+Desde la instancia (esto funciona aunque el puerto 80 siga cerrado en el
+security group, porque es tráfico local):
+
+```bash
+curl -I http://localhost
+curl -s http://localhost | head -20
+```
+
+Desde tu navegador, una vez abierto el puerto 80:
+`http://ec2-54-242-164-197.compute-1.amazonaws.com`
+
+Si algo falla, los logs en orden de utilidad:
+
+```bash
+sudo tail -50 /var/www/dsj/storage/logs/laravel.log
+sudo tail -50 /var/log/nginx/dsj-error.log
+sudo journalctl -u php-fpm -n 50
+```
+
+---
+
+## Paso 14 — Despliegues siguientes
+
+```bash
+sudo BRANCH=Diego SKIP_ASSETS=1 bash /var/www/dsj/deploy/deploy.sh
+```
+
+El script detecta solo el usuario web (`nginx`) y el servicio de FPM
+(`php-fpm`). Con `SKIP_ASSETS=1` no compila en el servidor: recuerda subir
+`public/build/` con el `rsync` del paso 8 cuando cambien los estilos o el JS.
+Sin esa variable, intentará `npm ci && npm run build` en la instancia.
+
+> `git reset --hard` **descarta** cambios hechos a mano en el servidor. Es
+> intencional: el servidor es un espejo del repo.
+
+---
+
+## Problemas frecuentes
+
+**502 Bad Gateway**
+Nginx no encuentra el socket de FPM. Verifica que exista y que el dueño sea
+`nginx`: `ls -l /run/php-fpm/www.sock`. Si el nombre es otro, corrige
+`fastcgi_pass` en `/etc/nginx/conf.d/dsj.conf`. Luego
+`sudo systemctl status php-fpm`.
+
+**403 Forbidden en la raíz**
+`nginx` no puede leer `/var/www/dsj/public`, o falta permiso de ejecución en un
+directorio padre. Repite el paso 11 y comprueba `ls -ld /var/www /var/www/dsj`.
+
+**Error 500 / página en blanco**
+Casi siempre permisos de `storage/` o `APP_KEY` vacía. Mira
+`storage/logs/laravel.log`.
+
+**Carga pero sin estilos**
+Falta `public/build/`. Comprueba que exista
+`/var/www/dsj/public/build/manifest.json` (paso 8).
+
+**`Access denied for user 'dsj'@'localhost'`**
+Creamos el usuario como `'dsj'@'127.0.0.1'`. Asegúrate de que el `.env` diga
+`DB_HOST=127.0.0.1` y no `localhost` (con `localhost`, MySQL usa el socket Unix
+y busca otro usuario). Y nunca `mysql`, que era el nombre del contenedor de Sail.
+
+**Cambié el `.env` y no surte efecto**
+La configuración está cacheada: `sudo -u nginx php artisan config:cache`.
+
+**El sitio funcionaba y ahora el DNS no resuelve**
+Reiniciaron la instancia y cambió el DNS público. Pide una Elastic IP y
+actualiza `APP_URL`.
+
+**Necesito la base de datos desde mi PC**
+No abras el 3306 ni instales phpMyAdmin. Túnel SSH y conecta tu cliente a
+`127.0.0.1:3307`:
+
+```bash
+ssh -i ~/.ssh/students.pem -L 3307:127.0.0.1:3306 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+```
+
+---
+
+## Siguiente paso: HTTPS
+
+Requiere un dominio propio apuntando a la instancia (Let's Encrypt no emite
+certificados para nombres `*.amazonaws.com`). Con dominio:
+
+```bash
+sudo dnf install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d dsj.midominio.com
+```
+
+Después, en el `.env`: `APP_URL=https://...` y `SESSION_SECURE_COOKIE=true`,
+seguido de `php artisan config:cache`.
