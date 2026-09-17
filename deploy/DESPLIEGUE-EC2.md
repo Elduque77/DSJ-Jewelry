@@ -174,26 +174,72 @@ composer -V
 
 ---
 
-## Paso 6 — MySQL 8.4
+## Paso 6 — Base de datos: SQLite
 
-Amazon Linux 2023 no trae MySQL server en sus repos, así que se agrega el
-oficial de Oracle (AL2023 es compatible con los paquetes de EL9):
+Es lo que está desplegado hoy. En una instancia de 913 MiB, no levantar un
+servidor de base de datos libera ~200-400 MiB para Nginx y PHP. No hace falta
+instalar nada: **`php8.4-pdo` ya incluye `pdo_sqlite.so` y `sqlite3.so`**.
+
+El archivo se crea con el mismo comando que trae `composer.json` en
+`post-create-project-cmd`:
+
+```bash
+cd /var/www/dsj
+php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
+```
+
+Y en el `.env`, con **ruta absoluta**:
+
+```
+DB_CONNECTION=sqlite
+DB_DATABASE=/var/www/dsj/database/database.sqlite
+DB_FOREIGN_KEYS=true
+```
+
+Activa WAL, que mejora bastante la concurrencia de lecturas y escrituras. Es
+una propiedad **persistente** del archivo: se ejecuta una sola vez.
+
+```bash
+sudo dnf install -y sqlite     # solo el cliente de linea de comandos
+sqlite3 database/database.sqlite "PRAGMA journal_mode=WAL;"   # responde: wal
+```
+
+### Tres detalles de SQLite que cuestan tiempo si no los sabes
+
+1. **El directorio tiene que ser escribible, no solo el archivo.** En WAL,
+   SQLite crea `database.sqlite-wal` y `-shm` junto al archivo. Si
+   `database/` no es escribible por `nginx`, hasta un `SELECT` falla con
+   `attempt to write a readonly database`. De ahí el `chmod 775` del paso 11.
+
+2. **Esos `-wal`/`-shm` desaparecen solos** cuando se cierra la última
+   conexión. No verlos en `ls` es normal, no significa que falten.
+
+3. **`sqlite3` como `ec2-user` da `readonly database`.** No es un fallo del
+   despliegue: el archivo es de `nginx`. Para consultarlo usa
+   `sudo -u nginx sqlite3 database/database.sqlite "..."`.
+
+### Migración de la migración de reseñas
+
+`2026_09_02_210326_create_resenas_table.php` hacía
+`ALTER TABLE resenas ADD CONSTRAINT ... CHECK`, que **SQLite no soporta** (solo
+acepta CHECK dentro del CREATE TABLE). Se ajustó para aplicarla solo en motores
+que la admiten; en SQLite la cota 1-5 la garantiza la validación del
+controlador. Sin ese cambio, `php artisan migrate` se detiene ahí.
+
+<details>
+<summary>Alternativa: MySQL 8.4 (si algún día hace falta paridad con Sail)</summary>
+
+AL2023 no trae MySQL server en sus repos (solo MariaDB 10.5/10.11/11.4), así que
+se agrega el de Oracle:
 
 ```bash
 sudo rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
 sudo dnf install -y https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
-sudo dnf install -y mysql-community-server
+sudo dnf install -y mysql-community-server php8.4-mysqlnd
 sudo systemctl enable --now mysqld
-```
-
-MySQL genera una contraseña temporal de `root` en el log. Sácala y cámbiala:
-
-```bash
 sudo grep 'temporary password' /var/log/mysqld.log
-sudo mysql_secure_installation   # te pedirá la temporal y luego una nueva
+sudo mysql_secure_installation
 ```
-
-Crea la base y el usuario de la app (cambia la contraseña):
 
 ```bash
 mysql -u root -p <<'SQL'
@@ -204,20 +250,7 @@ FLUSH PRIVILEGES;
 SQL
 ```
 
-Comprueba que **solo** escucha en local (debe decir `127.0.0.1:3306`):
-
-```bash
-sudo ss -tlnp | grep 3306
-```
-
-> MySQL 8.4 exige contraseñas que cumplan su política por defecto: mínimo 8
-> caracteres con mayúscula, minúscula, número y símbolo. Si la rechaza, ese es
-> el motivo.
-
-### Bajarle la memoria a MySQL (importante en t3.micro)
-
-Por defecto MySQL reserva bastante RAM, y aquí solo hay 913 MiB compartidos con
-Nginx y PHP:
+Con 913 MiB hay que bajarle la memoria o se pelea con PHP-FPM:
 
 ```bash
 sudo tee /etc/my.cnf.d/zz-dsj-small.cnf >/dev/null <<'CNF'
@@ -230,13 +263,10 @@ CNF
 sudo systemctl restart mysqld
 ```
 
-> **Alternativa:** AL2023 sí trae MariaDB en sus repos (`mariadb1011-server`,
-> `mariadb114-server`), que es más liviana y no requiere repo externo. La
-> descarté para mantener paridad con el `mysql:8.4` de desarrollo; si te decides
-> por ella, pon `DB_CONNECTION=mariadb` en el `.env`, que Laravel tiene driver
-> propio.
-
----
+En el `.env`: `DB_CONNECTION=mysql`, `DB_HOST=127.0.0.1`, `DB_DATABASE=dsj`,
+`DB_USERNAME=dsj`, `DB_PASSWORD=...`. MariaDB funciona igual con
+`DB_CONNECTION=mariadb`, que tiene driver propio en Laravel.
+</details>
 
 ## Paso 7 — Traer el código
 
@@ -262,8 +292,15 @@ clonas con la URL SSH (`git@github.com:<usuario>/<repo>.git`).
 
 ## Paso 8 — Los assets de Vite: compílalos en tu máquina
 
-`public/build/` está en `.gitignore`, así que hay que generarlo. **Recomendado:
-compilarlo en tu WSL y subirlo**, en vez de instalar Node en el servidor:
+`public/build/` está en `.gitignore`, así que hay que generarlo.
+
+> **Lo que pasó en la práctica:** ni WSL ni la instancia tenían Node (el
+> proyecto lo usaba dentro del contenedor de Sail), y `apt` en WSL solo ofrece
+> Node 18. Así que se instaló Node 22 en la instancia vía NodeSource y se
+> compiló allí: **tardó 362 ms** y ni se notó en la memoria. El frontend son 3
+> módulos, no un SPA. El miedo al OOM estaba exagerado para este proyecto.
+
+Si prefieres no tener Node en el servidor, compílalo donde sí lo tengas y súbelo:
 
 ```bash
 # en tu máquina, dentro de /home/diego/DSJ
@@ -361,6 +398,9 @@ sudo chown -R nginx:nginx /var/www/dsj
 sudo find /var/www/dsj -type d -exec chmod 755 {} +
 sudo find /var/www/dsj -type f -exec chmod 644 {} +
 sudo chmod -R 775 /var/www/dsj/storage /var/www/dsj/bootstrap/cache
+# SQLite: el DIRECTORIO tambien, para que pueda crear los -wal/-shm
+sudo chmod 775 /var/www/dsj/database
+sudo chmod 664 /var/www/dsj/database/database.sqlite
 sudo chmod 640 /var/www/dsj/.env
 sudo chmod +x /var/www/dsj/artisan /var/www/dsj/deploy/deploy.sh
 ```
