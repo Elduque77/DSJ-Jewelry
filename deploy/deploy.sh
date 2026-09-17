@@ -11,7 +11,22 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/dsj}"
 BRANCH="${BRANCH:-main}"
-WEB_USER="${WEB_USER:-www-data}"
+
+# El usuario del servidor web y el nombre del servicio de PHP-FPM cambian segun
+# la distro: Ubuntu usa www-data/php8.4-fpm, Amazon Linux usa nginx/php-fpm.
+if [[ -z "${WEB_USER:-}" ]]; then
+    if id -u nginx >/dev/null 2>&1; then
+        WEB_USER=nginx
+    else
+        WEB_USER=www-data
+    fi
+fi
+
+if [[ -z "${FPM_SERVICE:-}" ]]; then
+    FPM_SERVICE="$(systemctl list-unit-files --type=service --no-legend 'php*fpm*.service' \
+        | awk '{print $1}' | head -1)"
+    FPM_SERVICE="${FPM_SERVICE:-php-fpm.service}"
+fi
 
 # Composer y npm necesitan un HOME escribible; www-data no tiene uno propio.
 export COMPOSER_HOME="${COMPOSER_HOME:-/var/www/.composer}"
@@ -34,6 +49,8 @@ fi
 
 cd "$APP_DIR"
 
+echo "==> Usuario web: $WEB_USER | FPM: $FPM_SERVICE | rama: $BRANCH"
+
 mkdir -p "$COMPOSER_HOME" "$NPM_CACHE_DIR"
 chown "$WEB_USER":"$WEB_USER" "$COMPOSER_HOME" "$NPM_CACHE_DIR"
 
@@ -49,14 +66,25 @@ as_web "git reset --hard 'origin/$BRANCH'"
 echo "==> Dependencias PHP (sin paquetes de desarrollo)"
 as_web "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist"
 
-echo "==> Dependencias JS y build de assets"
-if [[ -f package-lock.json ]]; then
-    as_web "npm ci --ignore-scripts"
+# Con SKIP_ASSETS=1 no se compila en el servidor: se asume que public/build/
+# se subio ya compilado desde la maquina de desarrollo (ver la guia). Util en
+# instancias de 1 GB, donde el build de Vite se queda sin memoria.
+if [[ "${SKIP_ASSETS:-0}" == "1" ]]; then
+    echo "==> Assets: build omitido (SKIP_ASSETS=1)"
+    if [[ ! -f public/build/manifest.json ]]; then
+        echo "    ADVERTENCIA: no existe public/build/manifest.json." >&2
+        echo "    El sitio cargara sin estilos hasta que subas los assets." >&2
+    fi
 else
-    echo "    (aviso: no hay package-lock.json, usando npm install)"
-    as_web "npm install --ignore-scripts"
+    echo "==> Dependencias JS y build de assets"
+    if [[ -f package-lock.json ]]; then
+        as_web "npm ci --ignore-scripts"
+    else
+        echo "    (aviso: no hay package-lock.json, usando npm install)"
+        as_web "npm install --ignore-scripts"
+    fi
+    as_web "npm run build"
 fi
-as_web "npm run build"
 
 echo "==> Migraciones"
 as_web "php artisan migrate --force"
@@ -72,7 +100,7 @@ echo "==> Permisos"
 chown -R "$WEB_USER":"$WEB_USER" "$APP_DIR/storage" "$APP_DIR/bootstrap/cache"
 find "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" -type d -exec chmod 775 {} +
 
-echo "==> Recargar PHP-FPM"
-systemctl reload php8.4-fpm
+echo "==> Recargar PHP-FPM ($FPM_SERVICE)"
+systemctl reload "$FPM_SERVICE"
 
 echo "==> Listo. Sitio arriba de nuevo."
