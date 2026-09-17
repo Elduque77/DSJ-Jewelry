@@ -6,17 +6,27 @@ Guía para la instancia que nos compartieron:
 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
 ```
 
-El usuario `ec2-user` indica que es **Amazon Linux** (Ubuntu usaría `ubuntu`),
-así que aquí se usa `dnf`, el usuario web es `nginx` y el servicio es `php-fpm`.
-La región es **us-east-1** (`compute-1`). Si al entrar resulta que es Ubuntu,
-usa [DESPLIEGUE-EC2-ubuntu.md](DESPLIEGUE-EC2-ubuntu.md) en su lugar.
+Datos **verificados** entrando a la instancia (17-sep-2026):
+
+| | |
+|---|---|
+| SO | **Amazon Linux 2023** (`ID_LIKE=fedora`) → se usa `dnf`, usuario web `nginx`, servicio `php-fpm` |
+| Tipo | **t3.micro** — 913 MiB de RAM, 2 vCPU, disco de 8 GB (6,3 GB libres) |
+| Región | us-east-1 (`compute-1`) |
+| Estado | Limpia: solo corre `sshd`, sin servidor web ni base de datos, `/var/www` no existe |
+| SELinux | `Permissive` (no estorba) |
+| `sudo` | Sin contraseña |
+| PHP disponible | **8.4.25** en los repos oficiales (cumple el `>= 8.4.1` que exige Symfony 8) |
+
+Para instancias Ubuntu existe la variante
+[DESPLIEGUE-EC2-ubuntu.md](DESPLIEGUE-EC2-ubuntu.md).
 
 | Componente | En el servidor | Nota |
 |---|---|---|
 | PHP | **8.4** (`dnf install php8.4`) | AL2023 trae 8.1–8.5 en sus repos oficiales. **Obligatorio ≥ 8.4.1**: el `composer.lock` usa Symfony 8 |
 | MySQL | 8.4 LTS (repo de Oracle) | AL2023 **no** trae MySQL server; sí trae MariaDB. Usamos el repo oficial para igualar el `mysql:8.4` de desarrollo |
 | Nginx | del repo de AL2023 | Sitios en `/etc/nginx/conf.d/`, no en `sites-available` |
-| Node | 22 | Solo si compilas assets en el servidor; el paso 8 explica cómo evitarlo |
+| Node | 22 (vía NodeSource) | Solo si compilas assets en el servidor; el paso 8 explica cómo evitarlo. AL2023 solo trae Node 18, insuficiente para Vite 8 |
 
 La app no usa colas, tareas programadas, correo ni subida de archivos, así que
 **no** hace falta worker, cron de Laravel ni `php artisan storage:link`.
@@ -27,25 +37,23 @@ La app no usa colas, tareas programadas, correo ni subida de archivos, así que
 
 Lo comprobé desde fuera y ninguno se resuelve desde tu lado:
 
-### a) Falta la llave privada (`.pem`)
+### a) La llave: RESUELTO
 
-El puerto 22 responde, pero el servidor solo acepta autenticación por clave
-pública, no contraseña:
+La llave es `C:\Users\diego\arq.software\students` — **sin extensión `.pem`**,
+de ahí el `No such file or directory` al usar `-i students.pem`. Es una RSA de
+2048 bits en formato PEM.
 
-```
-ec2-user@ec2-54-242-164-197...: Permission denied (publickey,gssapi-keyex,gssapi-with-mic)
-```
-
-Pídele a quien creó la instancia **el archivo `.pem`** del key pair. Alternativa
-más limpia si no quiere compartir su llave: que agregue tu clave pública a
-`/home/ec2-user/.ssh/authorized_keys`. Genera la tuya con:
+Copiada a WSL con los permisos que exige OpenSSH (desde `/mnt/c` no sirve,
+porque ese montaje es `0777` y la llave se ignora):
 
 ```bash
-ssh-keygen -t ed25519 -C "diego-dsj"
-cat ~/.ssh/id_ed25519.pub   # esto es lo que le mandas
+cp /mnt/c/Users/diego/arq.software/students ~/.ssh/students.pem
+chmod 400 ~/.ssh/students.pem
 ```
 
-### b) El puerto 80 está cerrado
+Desde PowerShell funciona igual, pero sin el `.pem`: `ssh -i students ec2-user@...`
+
+### b) El puerto 80 está cerrado — PENDIENTE
 
 ```
 curl -I http://ec2-54-242-164-197.compute-1.amazonaws.com/
@@ -60,16 +68,11 @@ de entrada:
 |---|---|---|---|
 | HTTP | TCP | 80 | `0.0.0.0/0` |
 
-### c) Confirma el sistema operativo antes de instalar nada
+### c) El disco es pequeño
 
-En cuanto tengas acceso, lo primero:
-
-```bash
-ssh -i ~/dsj-key.pem ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
-cat /etc/os-release && free -h && df -h / && nproc
-```
-
-Anota la RAM: si es 1 GB (t3.micro/t2.micro), el paso 3 es obligatorio.
+8 GB en total, 6,3 GB libres. Alcanza, pero es un motivo más para **no**
+instalar Node ni compilar en el servidor (ver paso 8): `node_modules` de este
+proyecto pesa cientos de MB.
 
 > **Ojo con el nombre DNS:** `ec2-54-242-164-197...` es el DNS público
 > automático y **cambia si la instancia se detiene y se vuelve a encender**.
@@ -81,13 +84,13 @@ Anota la RAM: si es 1 GB (t3.micro/t2.micro), el paso 3 es obligatorio.
 ## Paso 1 — Conectarse
 
 ```bash
-chmod 400 ~/dsj-key.pem
-ssh -i ~/dsj-key.pem ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+ssh -i ~/.ssh/students.pem ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
 ```
 
-Todo lo que sigue va dentro de la instancia. Y ojo: **la instancia es de otra
-persona y puede estar compartida con el equipo.** Antes de instalar, revisa que
-no haya algo ya corriendo que puedas romper:
+Todo lo que sigue va dentro de la instancia. La llave se llama `students`, así
+que es de la materia y **puede estar compartida con otros compañeros**. Ya
+verifiqué que hoy está limpia, pero conviene repetir la comprobación antes de
+instalar, por si alguien desplegó algo en el entretanto:
 
 ```bash
 sudo systemctl list-units --type=service --state=running | grep -iE "nginx|httpd|apache|php|mysql|maria|docker"
@@ -109,7 +112,7 @@ sudo dnf install -y nginx git tar unzip rsync
 
 ---
 
-## Paso 3 — Swap (obligatorio si la instancia tiene 1 GB)
+## Paso 3 — Swap (OBLIGATORIO: la instancia tiene 913 MiB y cero swap)
 
 ```bash
 sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress
@@ -203,6 +206,28 @@ sudo ss -tlnp | grep 3306
 > caracteres con mayúscula, minúscula, número y símbolo. Si la rechaza, ese es
 > el motivo.
 
+### Bajarle la memoria a MySQL (importante en t3.micro)
+
+Por defecto MySQL reserva bastante RAM, y aquí solo hay 913 MiB compartidos con
+Nginx y PHP:
+
+```bash
+sudo tee /etc/my.cnf.d/zz-dsj-small.cnf >/dev/null <<'CNF'
+[mysqld]
+innodb_buffer_pool_size = 128M
+innodb_log_buffer_size  = 16M
+max_connections         = 30
+performance_schema      = OFF
+CNF
+sudo systemctl restart mysqld
+```
+
+> **Alternativa:** AL2023 sí trae MariaDB en sus repos (`mariadb1011-server`,
+> `mariadb114-server`), que es más liviana y no requiere repo externo. La
+> descarté para mantener paridad con el `mysql:8.4` de desarrollo; si te decides
+> por ella, pon `DB_CONNECTION=mariadb` en el `.env`, que Laravel tiene driver
+> propio.
+
 ---
 
 ## Paso 7 — Traer el código
@@ -235,7 +260,7 @@ compilarlo en tu WSL y subirlo**, en vez de instalar Node en el servidor:
 ```bash
 # en tu máquina, dentro de /home/diego/DSJ
 npm ci && npm run build
-rsync -avz -e "ssh -i ~/dsj-key.pem" public/build/ \
+rsync -avz -e "ssh -i ~/.ssh/students.pem" public/build/ \
     ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com:/tmp/build/
 ```
 
@@ -252,12 +277,13 @@ falta de memoria (es lo que más RAM consume de todo el despliegue).
 <details>
 <summary>Alternativa: compilar en el servidor</summary>
 
+**No sirve el `nodejs` de los repos de AL2023: solo hay 18.20.8**, y Vite 8
+exige `^20.19 || >=22.12`. Hay que usar NodeSource:
+
 ```bash
-sudo dnf install -y nodejs22 || {
-    curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
-    sudo dnf install -y nodejs
-}
-node -v   # necesita >= 22.12 (o 20.19+): Vite 8 no arranca con menos
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+sudo dnf install -y nodejs
+node -v   # tiene que ser >= 22.12
 sudo mkdir -p /var/www/.npm && sudo chown nginx:nginx /var/www/.npm
 cd /var/www/dsj
 sudo -u nginx -H npm_config_cache=/var/www/.npm npm ci --ignore-scripts
@@ -447,7 +473,7 @@ No abras el 3306 ni instales phpMyAdmin. Túnel SSH y conecta tu cliente a
 `127.0.0.1:3307`:
 
 ```bash
-ssh -i ~/dsj-key.pem -L 3307:127.0.0.1:3306 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+ssh -i ~/.ssh/students.pem -L 3307:127.0.0.1:3306 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
 ```
 
 ---
