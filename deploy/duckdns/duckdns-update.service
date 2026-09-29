@@ -1,0 +1,8 @@
+[Unit]
+Description=Actualiza el registro DuckDNS con la IP publica de la instancia
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/duckdns-update.sh

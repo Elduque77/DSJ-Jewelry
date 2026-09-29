@@ -82,10 +82,12 @@ Los 116 ms de arriba eran un rechazo activo, no un filtrado.
 instalar Node ni compilar en el servidor (ver paso 8): `node_modules` de este
 proyecto pesa cientos de MB.
 
-> **Ojo con el nombre DNS:** `ec2-54-242-164-197...` es el DNS público
-> automático y **cambia si la instancia se detiene y se vuelve a encender**.
-> Si eso pasa, hay que actualizar `APP_URL`. Para evitarlo, pide que le asignen
-> una **Elastic IP**.
+> **Ojo con la IP:** el DNS/IP público automático de AWS (`ec2-54-242-164-197...`,
+> luego `54.235.11.165`) **cambia cada vez que la instancia se detiene y se
+> vuelve a encender**. La solución sin tocar AWS es un nombre fijo en DuckDNS
+> que la propia instancia actualiza al arrancar: ver
+> [IP cambiante (DuckDNS)](#ip-cambiante-duckdns) y `deploy/setup-ec2.sh`, que
+> automatiza los pasos 2–12 y lo deja instalado.
 
 ---
 
@@ -513,8 +515,9 @@ y busca otro usuario). Y nunca `mysql`, que era el nombre del contenedor de Sail
 La configuración está cacheada: `sudo -u nginx php artisan config:cache`.
 
 **El sitio funcionaba y ahora el DNS no resuelve**
-Reiniciaron la instancia y cambió el DNS público. Pide una Elastic IP y
-actualiza `APP_URL`.
+Reiniciaron la instancia y cambió la IP pública. Si usas DuckDNS, espera ~1 min
+y revisa `journalctl -u duckdns-update`; si `KO`, corrige subdominio/token en
+`/etc/duckdns.env`.
 
 **Necesito la base de datos desde mi PC**
 No abras el 3306 ni instales phpMyAdmin. Túnel SSH y conecta tu cliente a
@@ -522,6 +525,40 @@ No abras el 3306 ni instales phpMyAdmin. Túnel SSH y conecta tu cliente a
 
 ```bash
 ssh -i ~/.ssh/students.pem -L 3307:127.0.0.1:3306 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+```
+
+---
+
+## IP cambiante (DuckDNS)
+
+Cada arranque asigna una IP pública nueva, así que se usa un subdominio gratis
+de [duckdns.org](https://www.duckdns.org) (p. ej. `dsj-arq.duckdns.org`) que la
+instancia reapunta a sí misma:
+
+- `deploy/duckdns/duckdns-update.sh` llama a la API de DuckDNS sin `ip=`, con lo
+  que se registra la IP desde la que sale la petición (la pública).
+- `duckdns-update.timer` la ejecuta 30 s después de arrancar y luego cada 5 min.
+- Subdominio y token viven en `/etc/duckdns.env` (`chmod 600`), **nunca** en el repo.
+
+Instalación inicial completa (crea todo y despliega `main`):
+
+```bash
+sudo REPO_URL=https://github.com/<usuario>/<repo>.git \
+     DUCKDNS_DOMAIN=dsj-arq DUCKDNS_TOKEN=<token> \
+     bash /ruta/al/repo/deploy/setup-ec2.sh
+```
+
+Nginx usa `server_name _`, así que el sitio responde igual por el nombre DuckDNS
+que por la IP directa; Laravel toma el host de la petición, por lo que no hay
+que cambiar nada tras cada reinicio. `APP_URL` apunta al nombre DuckDNS y ya no
+se desactualiza.
+
+Comprobar tras un reinicio (~1 min después):
+
+```bash
+dig +short dsj-arq.duckdns.org          # debe ser la IP nueva
+sudo systemctl list-timers | grep duckdns
+sudo journalctl -u duckdns-update -n 20
 ```
 
 ---
