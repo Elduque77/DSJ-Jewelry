@@ -22,7 +22,7 @@ class RecomendacionProductoService
     {
         $apiKey = (string) config('services.gemini.api_key');
         if ($apiKey === '') {
-            throw new RecomendacionProductoException('La API de Gemini no está configurada. Define GEMINI_API_KEY en .env.');
+            throw new RecomendacionProductoException(__('messages.recommendation_api_missing'));
         }
 
         $catalogo = Producto::with('categoria')
@@ -30,15 +30,15 @@ class RecomendacionProductoService
             ->get();
 
         if ($catalogo->isEmpty()) {
-            throw new RecomendacionProductoException('No hay productos disponibles para recomendar.');
+            throw new RecomendacionProductoException(__('messages.recommendation_no_products'));
         }
 
         $texto = $this->consultarGemini($apiKey, $necesidad, $catalogo, $limite);
-        $resultado = $this->decodificarRespuesta($texto);
+        $resultado = $this->decodificarRespuesta($texto, $limite);
         $productos = $catalogo->whereIn('idProducto', $resultado['ids'])->values();
 
         if ($productos->isEmpty()) {
-            throw new RecomendacionProductoException('Gemini no devolvió productos válidos del catálogo.');
+            throw new RecomendacionProductoException(__('messages.recommendation_invalid_products'));
         }
 
         return [
@@ -59,8 +59,9 @@ class RecomendacionProductoService
         ])->values()->all();
 
         $prompt = sprintf(
-            'Eres el asesor de compras de DSJ Jewelry. Tu objetivo es ayudar a que la persona elija con ilusión y seguridad, sin exagerar ni prometer que le gustará con certeza. Analiza su necesidad, el contexto del regalo y sus preferencias. Recomienda como máximo %d productos únicamente del catálogo recibido. Responde SOLO JSON válido con esta estructura: {"producto_ids":[1,2],"explicacion":"..."}. La explicación debe estar en español, ser breve (máximo 2 frases), cálida, natural y convincente. Habla de por qué el diseño, material o estilo encaja con lo que busca y qué sensación puede transmitir al regalarlo. No menciones IDs, stock, catálogo, precios, inteligencia artificial ni aspectos técnicos. Necesidad de la persona: %s. Catálogo: %s',
+            'Eres el asesor de compras de DSJ Jewelry. Tu objetivo es ayudar a que la persona elija con ilusión y seguridad, sin exagerar ni prometer que le gustará con certeza. Analiza su necesidad, el contexto del regalo y sus preferencias. Recomienda como máximo %d productos únicamente del catálogo recibido. Responde SOLO JSON válido con esta estructura: {"producto_ids":[1,2],"explicacion":"..."}. La explicación debe ser breve (máximo 2 frases), cálida, natural y convincente, en idioma %s. Habla de por qué el diseño, material o estilo encaja con lo que busca y qué sensación puede transmitir al regalarlo. No menciones IDs, stock, catálogo, precios, inteligencia artificial ni aspectos técnicos. Necesidad de la persona: %s. Catálogo: %s',
             $limite,
+            app()->getLocale() === 'en' ? 'inglés' : 'español',
             $necesidad,
             json_encode($productos, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
         );
@@ -91,9 +92,9 @@ class RecomendacionProductoService
                 : null;
 
             $mensaje = match ($status) {
-                401, 403 => 'La conexión con el asistente no está autorizada. Verifica la configuración de Gemini.',
-                429 => 'La cuota de Gemini está agotada para esta API key. Verifica el límite o la facturación en Google AI Studio.',
-                default => 'El asistente no está disponible en este momento. Inténtalo de nuevo.',
+                401, 403 => __('messages.recommendation_unauthorized'),
+                429 => __('messages.recommendation_quota'),
+                default => __('messages.recommendation_unavailable'),
             };
 
             throw new RecomendacionProductoException($mensaje, 0, $exception);
@@ -101,7 +102,7 @@ class RecomendacionProductoService
 
         $texto = $response->json('candidates.0.content.parts.0.text');
         if (! is_string($texto) || trim($texto) === '') {
-            throw new RecomendacionProductoException('Gemini devolvió una respuesta vacía.');
+            throw new RecomendacionProductoException(__('messages.recommendation_empty'));
         }
 
         return $texto;
@@ -110,23 +111,23 @@ class RecomendacionProductoService
     /**
      * @return array{ids: list<int>, explicacion: string}
      */
-    private function decodificarRespuesta(string $respuesta): array
+    private function decodificarRespuesta(string $respuesta, int $limite): array
     {
         $datos = json_decode(trim($respuesta), true);
         if (! is_array($datos) || ! isset($datos['producto_ids']) || ! is_array($datos['producto_ids'])) {
-            throw new RecomendacionProductoException('La respuesta de Gemini no tiene el formato esperado.');
+            throw new RecomendacionProductoException(__('messages.recommendation_invalid_format'));
         }
 
-        $ids = array_values(array_filter($datos['producto_ids'], 'is_int'));
+        $ids = array_values(array_unique(array_filter($datos['producto_ids'], 'is_int')));
         if ($ids === []) {
-            throw new RecomendacionProductoException('Gemini no encontró productos adecuados.');
+            throw new RecomendacionProductoException(__('messages.recommendation_no_match'));
         }
 
         return [
-            'ids' => $ids,
+            'ids' => array_slice($ids, 0, $limite),
             'explicacion' => is_string($datos['explicacion'] ?? null)
                 ? $datos['explicacion']
-                : 'Estas recomendaciones coinciden con lo que estás buscando.',
+                : __('messages.recommendation_default'),
         ];
     }
 }
