@@ -35,7 +35,7 @@ class AdminAuthController extends Controller
             ], $recordar)
         ) {
             return back()->withErrors([
-                'correo' => 'Las credenciales no coinciden con ningun administrador registrado.',
+                'correo' => __('messages.invalid_credentials_admin'),
             ])->onlyInput('correo');
         }
 

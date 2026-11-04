@@ -25,7 +25,7 @@ class CarritoService
         $producto = Producto::findOrFail($idProducto);
 
         if (! $producto->consultarDisponibilidad()) {
-            throw new InvalidArgumentException('El producto no tiene stock disponible.');
+            throw new InvalidArgumentException(__('messages.out_of_stock'));
         }
 
         $contenido = $this->contenidoCrudo();

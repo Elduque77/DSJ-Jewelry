@@ -22,7 +22,7 @@ class ResenaController extends Controller
 
         if (Resena::where('idCliente', $idCliente)->where('idProducto', $producto->getIdProducto())->exists()) {
             return back()->withErrors([
-                'calificacion' => 'Ya publicaste una resena para este producto.',
+                'calificacion' => __('messages.review_already_exists'),
             ]);
         }
 
@@ -38,7 +38,7 @@ class ResenaController extends Controller
         $resena->save();
 
         return redirect()->route('producto.show', $producto)
-            ->with('mensaje', 'Resena publicada correctamente.');
+            ->with('mensaje', __('messages.review_created'));
     }
 
     public function update(Request $request, Resena $resena): RedirectResponse
@@ -53,7 +53,7 @@ class ResenaController extends Controller
         $resena->save();
 
         return redirect()->route('producto.show', $resena->getIdProducto())
-            ->with('mensaje', 'Resena actualizada correctamente.');
+            ->with('mensaje', __('messages.review_updated'));
     }
 
     public function destroy(Resena $resena): RedirectResponse
@@ -64,7 +64,7 @@ class ResenaController extends Controller
         $resena->delete();
 
         return redirect()->route('producto.show', $idProducto)
-            ->with('mensaje', 'Resena eliminada correctamente.');
+            ->with('mensaje', __('messages.review_deleted'));
     }
 
     // El proyecto no usa policies. La pertenencia se comprueba aqui, igual que

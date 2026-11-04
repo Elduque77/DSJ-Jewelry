@@ -27,7 +27,7 @@ class ResenaClienteTest extends TestCase
 
         $this->get('/producto/'.$producto->getIdProducto())
             ->assertOk()
-            ->assertSee('Inicia sesión')
+            ->assertSee('Iniciar sesión')
             ->assertDontSee('Escribe tu reseña');
     }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\ClienteAuthController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ProductoPublicoController;
 use App\Http\Controllers\ResenaController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/recomendaciones', [HomeController::class, 'recomendar'])->name('recomendaciones');
+Route::get('/idioma/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 Route::get('/producto/{producto}', [ProductoPublicoController::class, 'show'])->name('producto.show');
 
 Route::middleware('guest:cliente')->group(function (): void {
