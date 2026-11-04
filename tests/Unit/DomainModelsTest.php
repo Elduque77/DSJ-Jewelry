@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Personalizacion;
 use App\Models\Producto;
 use App\Models\Resena;
+use App\Models\Categoria;
 use Illuminate\Database\Eloquent\Collection;
 use PHPUnit\Framework\TestCase;
 
@@ -56,5 +57,82 @@ class DomainModelsTest extends TestCase
 
         $this->assertSame(0, $producto->getTotalResenas());
         $this->assertSame(0.0, $producto->getPromedioCalificacion());
+    }
+
+    public function test_producto_consulta_disponibilidad_segun_stock(): void
+    {
+        $disponible = new Producto(['stock' => 2]);
+        $agotado = new Producto(['stock' => 0]);
+
+        $this->assertTrue($disponible->consultarDisponibilidad());
+        $this->assertFalse($agotado->consultarDisponibilidad());
+    }
+
+    public function test_producto_setters_actualizan_sus_atributos(): void
+    {
+        $producto = new Producto([
+            'nombre' => 'Anillo',
+            'descripcion' => 'Descripción inicial',
+            'material' => 'Plata',
+            'precio' => 100.00,
+            'stock' => 1,
+        ]);
+
+        $producto->setNombre('Cadena');
+        $producto->setDescripcion('Descripción actualizada');
+        $producto->setMaterial('Oro');
+        $producto->setPrecio(250.50);
+        $producto->setStock(4);
+
+        $this->assertSame('Cadena', $producto->getNombre());
+        $this->assertSame('Descripción actualizada', $producto->getDescripcion());
+        $this->assertSame('Oro', $producto->getMaterial());
+        $this->assertSame(250.50, $producto->getPrecio());
+        $this->assertSame(4, $producto->getStock());
+    }
+
+    public function test_producto_puede_tener_una_imagen(): void
+    {
+        $producto = new Producto;
+
+        $producto->setImagen('products/anillo-luna.webp');
+
+        $this->assertSame('products/anillo-luna.webp', $producto->getImagen());
+    }
+
+    public function test_producto_nuevo_usa_imagen_predeterminada(): void
+    {
+        $producto = new Producto(['nombre' => 'Anillo sin foto']);
+
+        $this->assertSame(Producto::IMAGEN_PREDETERMINADA, $producto->getImagen());
+        $this->assertTrue($producto->usaImagenPredeterminada());
+    }
+
+    public function test_categoria_setters_actualizan_sus_atributos(): void
+    {
+        $categoria = new Categoria([
+            'nombre' => 'Anillos',
+            'descripcion' => 'Piezas para regalar',
+        ]);
+
+        $categoria->setNombre('Cadenas');
+        $categoria->setDescripcion('Piezas para usar a diario');
+
+        $this->assertSame('Cadenas', $categoria->getNombre());
+        $this->assertSame('Piezas para usar a diario', $categoria->getDescripcion());
+    }
+
+    public function test_personalizacion_setters_actualizan_la_opcion(): void
+    {
+        $personalizacion = new Personalizacion([
+            'nombreOpcion' => 'Grabado',
+            'precioAdicional' => 10.00,
+        ]);
+
+        $personalizacion->setNombreOpcion('Baño dorado');
+        $personalizacion->setPrecioAdicional(35.50);
+
+        $this->assertSame('Baño dorado', $personalizacion->getNombreOpcion());
+        $this->assertSame(35.50, $personalizacion->getPrecioAdicional());
     }
 }

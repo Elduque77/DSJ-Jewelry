@@ -1,12 +1,12 @@
 {{-- Autor: Samuel Correa Velasquez (Desarrollador) --}}
 @extends('layouts.app')
 @section('content')
-<h1>Acceso de administración</h1>
+<h1>{{ __('messages.admin_login_title') }}</h1>
 <form method="POST" action="{{ route('admin.login.submit') }}">
     @csrf
-    <label>Correo<input type="email" name="correo" value="{{ old('correo') }}" required></label>
-    <label>Contraseña<input type="password" name="contrasena" required></label>
-    <label><input type="checkbox" name="recordar" value="1"> Recordarme</label>
-    <button type="submit">Entrar</button>
+    <label>{{ __('messages.email') }}<input type="email" name="correo" value="{{ old('correo') }}" required></label>
+    <label>{{ __('messages.password') }}<input type="password" name="contrasena" required></label>
+    <label><input type="checkbox" name="recordar" value="1"> {{ __('messages.remember') }}</label>
+    <button type="submit">{{ __('messages.enter') }}</button>
 </form>
 @endsection

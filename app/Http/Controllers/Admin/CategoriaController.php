@@ -45,7 +45,7 @@ class CategoriaController extends Controller
         $categoria->save();
 
         return redirect()->route('admin.categoria.index')
-            ->with('mensaje', 'Categoria creada correctamente.');
+            ->with('mensaje', __('messages.category_created'));
     }
 
     public function edit(Categoria $categoria): View
@@ -67,7 +67,7 @@ class CategoriaController extends Controller
         $categoria->save();
 
         return redirect()->route('admin.categoria.index')
-            ->with('mensaje', 'Categoria actualizada correctamente.');
+            ->with('mensaje', __('messages.category_updated'));
     }
 
     public function destroy(Categoria $categoria): RedirectResponse
@@ -75,6 +75,6 @@ class CategoriaController extends Controller
         $categoria->delete();
 
         return redirect()->route('admin.categoria.index')
-            ->with('mensaje', 'Categoria eliminada correctamente.');
+            ->with('mensaje', __('messages.category_deleted'));
     }
 }

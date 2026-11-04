@@ -11,5 +11,5 @@
         @endif
     </article>
 @empty
-    <p>Todavía no hay reseñas para este producto.</p>
+    <p>{{ __('messages.no_reviews') }}</p>
 @endforelse
