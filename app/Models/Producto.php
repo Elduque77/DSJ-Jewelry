@@ -45,7 +45,7 @@ class Producto extends Model
     protected static function booted(): void
     {
         static::creating(function (Producto $producto): void {
-            if (!$producto->getImagen()) {
+            if (! $producto->getImagen()) {
                 $producto->setImagen(self::IMAGEN_PREDETERMINADA);
             }
         });

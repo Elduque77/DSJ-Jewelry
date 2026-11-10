@@ -127,6 +127,7 @@ return [
     'insufficient_balance' => 'No tienes saldo suficiente para pagar esta compra.',
     'payment_method_invalid' => 'El método de pago no es válido.',
     'cheque_generated' => 'Cheque generado. Tu compra queda pendiente hasta que se cobre.',
+    'view_document' => 'Ver cheque (PDF)',
     'cheque_title' => 'Cheque',
     'cheque_number' => 'Número de cheque',
     'cheque_pay_to' => 'Páguese a la orden de',

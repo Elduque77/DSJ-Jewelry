@@ -3,8 +3,11 @@
 Guía para la instancia que nos compartieron:
 
 ```
-ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+ec2-user@<HOST_EC2>
 ```
+
+`<HOST_EC2>` es el DNS público de la instancia (`ec2-xx-xx-xx-xx.compute-1.amazonaws.com`),
+visible en la consola de AWS. No se deja en el repo porque cambia con la IP.
 
 Datos **verificados** entrando a la instancia (17-sep-2026):
 
@@ -40,7 +43,7 @@ Lo comprobé desde fuera y ninguno se resuelve desde tu lado:
 
 ### a) La llave: RESUELTO
 
-La llave es `C:\Users\diego\arq.software\students` — **sin extensión `.pem`**,
+La llave es `C:\Users\<usuario>\<carpeta>\students` — **sin extensión `.pem`**,
 de ahí el `No such file or directory` al usar `-i students.pem`. Es una RSA de
 2048 bits en formato PEM.
 
@@ -48,7 +51,7 @@ Copiada a WSL con los permisos que exige OpenSSH (desde `/mnt/c` no sirve,
 porque ese montaje es `0777` y la llave se ignora):
 
 ```bash
-cp /mnt/c/Users/diego/arq.software/students ~/.ssh/students.pem
+cp /mnt/c/Users/<usuario>/<carpeta>/students ~/.ssh/students.pem
 chmod 400 ~/.ssh/students.pem
 ```
 
@@ -59,7 +62,7 @@ Desde PowerShell funciona igual, pero sin el `.pem`: `ssh -i students ec2-user@.
 Antes de instalar nada, esto parecía un bloqueo del security group:
 
 ```
-curl -I http://ec2-54-242-164-197.compute-1.amazonaws.com/
+curl -I http://<HOST_EC2>/
 → Failed to connect ... port 80 after 116 ms: Couldn't connect to server
 ```
 
@@ -82,7 +85,7 @@ Los 116 ms de arriba eran un rechazo activo, no un filtrado.
 instalar Node ni compilar en el servidor (ver paso 8): `node_modules` de este
 proyecto pesa cientos de MB.
 
-> **Ojo con la IP:** el DNS/IP público automático de AWS (`ec2-54-242-164-197...`,
+> **Ojo con la IP:** el DNS/IP público automático de AWS (`ec2-xx-xx-xx-xx...`,
 > luego `54.235.11.165`) **cambia cada vez que la instancia se detiene y se
 > vuelve a encender**. La solución sin tocar AWS es un nombre fijo en DuckDNS
 > que la propia instancia actualiza al arrancar: ver
@@ -94,7 +97,7 @@ proyecto pesa cientos de MB.
 ## Paso 1 — Conectarse
 
 ```bash
-ssh -i ~/.ssh/students.pem ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+ssh -i ~/.ssh/students.pem ec2-user@<HOST_EC2>
 ```
 
 Todo lo que sigue va dentro de la instancia. La llave se llama `students`, así
@@ -305,10 +308,10 @@ clonas con la URL SSH (`git@github.com:<usuario>/<repo>.git`).
 Si prefieres no tener Node en el servidor, compílalo donde sí lo tengas y súbelo:
 
 ```bash
-# en tu máquina, dentro de /home/diego/DSJ
+# en tu máquina, dentro de la raíz del repo
 npm ci && npm run build
 rsync -avz -e "ssh -i ~/.ssh/students.pem" public/build/ \
-    ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com:/tmp/build/
+    ec2-user@<HOST_EC2>:/tmp/build/
 ```
 
 Y en el servidor:
@@ -348,7 +351,7 @@ sudo nano /var/www/dsj/.env
 ```
 
 Rellena:
-- `APP_URL=http://ec2-54-242-164-197.compute-1.amazonaws.com` (sin barra final)
+- `APP_URL=http://<HOST_EC2>` (sin barra final)
 - `DB_PASSWORD=` la del paso 6
 - `GEMINI_API_KEY=` tu clave (solo aplica si despliegas una rama que ya tenga
   la integración con Gemini; en `Diego` ese servicio todavía no existe)
@@ -458,7 +461,7 @@ curl -s http://localhost | head -20
 ```
 
 Desde tu navegador, una vez abierto el puerto 80:
-`http://ec2-54-242-164-197.compute-1.amazonaws.com`
+`http://<HOST_EC2>`
 
 Si algo falla, los logs en orden de utilidad:
 
@@ -524,7 +527,7 @@ No abras el 3306 ni instales phpMyAdmin. Túnel SSH y conecta tu cliente a
 `127.0.0.1:3307`:
 
 ```bash
-ssh -i ~/.ssh/students.pem -L 3307:127.0.0.1:3306 ec2-user@ec2-54-242-164-197.compute-1.amazonaws.com
+ssh -i ~/.ssh/students.pem -L 3307:127.0.0.1:3306 ec2-user@<HOST_EC2>
 ```
 
 ---
