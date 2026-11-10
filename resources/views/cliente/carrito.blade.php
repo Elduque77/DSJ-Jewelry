@@ -53,6 +53,21 @@
     @auth('cliente')
         <form method="POST" action="{{ route('carrito.confirmar') }}">
             @csrf
+            <fieldset>
+                <legend>{{ __('messages.payment_method') }}</legend>
+                <label>
+                    <input type="radio" name="metodo_pago" value="saldo" @checked(old('metodo_pago', 'saldo') === 'saldo')>
+                    {{ __('messages.pay_with_balance') }}
+                    ({{ __('messages.your_balance') }}: ${{ number_format(auth('cliente')->user()->getSaldo(), 2) }})
+                </label>
+                <label>
+                    <input type="radio" name="metodo_pago" value="cheque" @checked(old('metodo_pago') === 'cheque')>
+                    {{ __('messages.pay_with_cheque') }}
+                </label>
+                @error('metodo_pago')
+                    <p class="error">{{ $message }}</p>
+                @enderror
+            </fieldset>
             <button type="submit">{{ __('messages.confirm_purchase') }}</button>
         </form>
     @else

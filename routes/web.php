@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\AdminAuthController;
 use App\Http\Controllers\Auth\ClienteAuthController;
 use App\Http\Controllers\CarniceriaController;
 use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\ChequeController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ProductoPublicoController;
@@ -39,6 +40,7 @@ Route::middleware('guest:cliente')->group(function (): void {
 Route::middleware('auth:cliente')->group(function (): void {
     Route::post('/logout', [ClienteAuthController::class, 'logout'])->name('cliente.logout');
     Route::post('/carrito/confirmar', [CarritoController::class, 'confirmar'])->name('carrito.confirmar');
+    Route::get('/compras/{compra}/cheque', [ChequeController::class, 'mostrar'])->name('compra.cheque');
     Route::post('/producto/{producto}/resena', [ResenaController::class, 'store'])->name('resena.store');
     Route::put('/resena/{resena}', [ResenaController::class, 'update'])->name('resena.update');
     Route::delete('/resena/{resena}', [ResenaController::class, 'destroy'])->name('resena.destroy');
