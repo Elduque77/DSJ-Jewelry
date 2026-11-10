@@ -53,6 +53,18 @@
     @auth('cliente')
         <form method="POST" action="{{ route('carrito.confirmar') }}">
             @csrf
+            <fieldset>
+                <legend>{{ __('messages.payment_method') }}</legend>
+                @foreach ($metodosPago as $clave => $etiqueta)
+                    <label>
+                        <input type="radio" name="metodo_pago" value="{{ $clave }}" @checked(old('metodo_pago', $metodoPredeterminado) === $clave)>
+                        {{ $etiqueta }}
+                    </label>
+                @endforeach
+                @error('metodo_pago')
+                    <p class="error">{{ $message }}</p>
+                @enderror
+            </fieldset>
             <button type="submit">{{ __('messages.confirm_purchase') }}</button>
         </form>
     @else

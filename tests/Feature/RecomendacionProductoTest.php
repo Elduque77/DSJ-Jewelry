@@ -53,7 +53,7 @@ class RecomendacionProductoTest extends TestCase
 
         $this->withSession(['locale' => 'es'])
             ->post('/recomendaciones', [
-            'necesidad' => 'Busco un anillo elegante de plata',
+                'necesidad' => 'Busco un anillo elegante de plata',
             ])
             ->assertOk()
             ->assertSee('Recomendaciones para ti')

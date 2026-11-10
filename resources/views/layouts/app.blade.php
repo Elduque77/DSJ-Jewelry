@@ -25,7 +25,7 @@
 </head>
 <body>
     <nav class="site-nav">
-        <a href="{{ route('home') }}">DSJ Jewelry</a>
+        <a href="{{ route('home') }}">{{ __('messages.brand') }}</a>
         <a href="{{ route('carniceria.index') }}">Carnicería aliada</a>
         @auth('admin')
             <a href="{{ route('admin.dashboard') }}">{{ __('messages.admin_panel') }}</a>
@@ -56,6 +56,9 @@
     </nav>
     <main class="site-main">
         @if (session('mensaje')) <p class="success">{{ session('mensaje') }}</p> @endif
+        @if (session('documento'))
+            <p class="success"><a href="{{ session('documento') }}" target="_blank" rel="noopener">{{ __('messages.view_document') }}</a></p>
+        @endif
         @if (session('error')) <p class="error">{{ session('error') }}</p> @endif
         @if ($errors->any())
             <div class="error"><ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
