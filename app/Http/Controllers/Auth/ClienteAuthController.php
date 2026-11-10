@@ -36,7 +36,7 @@ class ClienteAuthController extends Controller
             ], $recordar)
         ) {
             return back()->withErrors([
-                'correo' => 'Las credenciales no coinciden con ningun cliente registrado.',
+                'correo' => __('messages.invalid_credentials_client'),
             ])->onlyInput('correo');
         }
 
@@ -71,7 +71,7 @@ class ClienteAuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('home')
-            ->with('mensaje', 'Cuenta creada correctamente. ¡Bienvenido a DSJ Jewelry!');
+            ->with('mensaje', __('messages.account_created'));
     }
 
     public function logout(Request $request): RedirectResponse

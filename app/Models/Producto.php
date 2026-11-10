@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model
 {
+    public const IMAGEN_PREDETERMINADA = 'products/product-placeholder.svg';
+
     /**
      * ATRIBUTOS DE PRODUCTO
      * $this->attributes['idProducto'] - int - clave primaria del producto
@@ -37,7 +39,17 @@ class Producto extends Model
         'material',
         'precio',
         'stock',
+        'imagen',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Producto $producto): void {
+            if (!$producto->getImagen()) {
+                $producto->setImagen(self::IMAGEN_PREDETERMINADA);
+            }
+        });
+    }
 
     public function getIdProducto(): int
     {
@@ -92,6 +104,21 @@ class Producto extends Model
     public function getStock(): int
     {
         return $this->attributes['stock'];
+    }
+
+    public function getImagen(): string
+    {
+        return $this->attributes['imagen'] ?? self::IMAGEN_PREDETERMINADA;
+    }
+
+    public function setImagen(?string $imagen): void
+    {
+        $this->attributes['imagen'] = $imagen;
+    }
+
+    public function usaImagenPredeterminada(): bool
+    {
+        return $this->getImagen() === self::IMAGEN_PREDETERMINADA;
     }
 
     public function setStock(int $stock): void
