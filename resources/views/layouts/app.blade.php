@@ -27,6 +27,7 @@
     <nav class="site-nav">
         <a href="{{ route('home') }}" aria-label="{{ __('messages.brand') }}">{{ __('messages.brand') }}</a>
         <a href="{{ route('home') }}">{{ __('messages.home') }}</a>
+        <a href="{{ route('carniceria.index') }}">Carnicería aliada</a>
         @auth('admin')
             <a href="{{ route('admin.dashboard') }}">{{ __('messages.admin_panel') }}</a>
             <a href="{{ route('admin.categoria.index') }}">{{ __('messages.categories') }}</a>
