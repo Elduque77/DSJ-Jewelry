@@ -26,6 +26,7 @@
 <body>
     <nav class="site-nav">
         <a href="{{ route('home') }}">DSJ Jewelry</a>
+        <a href="{{ route('carniceria.index') }}">Carnicería aliada</a>
         @auth('admin')
             <a href="{{ route('admin.dashboard') }}">Dashboard</a>
             <a href="{{ route('admin.categoria.index') }}">Categorías</a>
