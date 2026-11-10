@@ -22,6 +22,7 @@ class Cliente extends Authenticatable
      * $this->attributes['telefono'] - string - telefono de contacto, opcional
      * $this->attributes['direccion'] - string - direccion de envio, opcional
      * $this->attributes['contrasena'] - string - contrasena cifrada
+     * $this->attributes['saldo'] - float - dinero simulado disponible para pagar
      * $this->resenas - Collection - resenas escritas por el cliente
      */
     public $primaryKey = 'idCliente';
@@ -104,6 +105,11 @@ class Cliente extends Authenticatable
     public function verificarContrasena(string $contrasena): bool
     {
         return Hash::check($contrasena, $this->attributes['contrasena']);
+    }
+
+    public function getSaldo(): float
+    {
+        return (float) ($this->attributes['saldo'] ?? 0);
     }
 
     public function getNombreCompleto(): string
