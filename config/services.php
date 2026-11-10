@@ -40,4 +40,9 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
     ],
 
+    'carniceria' => [
+        'url' => env('CARNICERIA_API_URL', 'http://184.194.7.224/api/productos-en-venta'),
+        'cache_minutos' => (int) env('CARNICERIA_CACHE_MINUTOS', 5),
+    ],
+
 ];
