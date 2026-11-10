@@ -48,9 +48,9 @@ h1, h2, h3 { font-weight: 400; }
 .home-page h1, .home-page h2, .home-page h3 { font-weight: 400; letter-spacing: -.02em; }
 .home-page p { color: color-mix(in srgb, var(--text) 68%, transparent); line-height: 1.65; }
 .eyebrow { color: var(--accent); font: 600 .7rem/1 Arial, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
-.hero { display: grid; grid-template-columns: 1.1fr .9fr; min-height: 390px; background: var(--surface); border: 1px solid var(--line); }
+.hero { display: grid; grid-template-columns: 11fr 9fr; min-height: 390px; background: var(--surface); border: 1px solid var(--line); }
 .hero-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 6vw, 5.5rem); }
-.hero h2 { max-width: 560px; margin: .7rem 0 1rem; font-size: clamp(3rem, 7vw, 6.3rem); line-height: .95; }
+.hero h1 { max-width: 560px; margin: .7rem 0 1rem; font-size: clamp(3rem, 7vw, 6.3rem); line-height: .95; }
 .hero p { max-width: 440px; font-size: 1rem; }
 .hero-button { width: fit-content; margin-top: 1.2rem; padding: .9rem 1.3rem; background: var(--accent); color: var(--button-text) !important; text-decoration: none; font: 600 .72rem Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 .hero-jewel { display: grid; place-items: center; min-height: 280px; background: radial-gradient(circle at 50% 45%, var(--accent-soft), var(--surface) 28%, var(--bg) 70%); }
