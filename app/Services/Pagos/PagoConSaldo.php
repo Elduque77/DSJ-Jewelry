@@ -7,6 +7,7 @@
 namespace App\Services\Pagos;
 
 use App\Contracts\PagoInterface;
+use App\Contracts\ResultadoPago;
 use App\Exceptions\PagoException;
 use App\Models\Cliente;
 use App\Models\Compra;
@@ -16,6 +17,12 @@ use App\Models\Compra;
  */
 class PagoConSaldo implements PagoInterface
 {
+    public function etiqueta(Cliente $cliente): string
+    {
+        return __('messages.pay_with_balance')
+            .' ('.__('messages.your_balance').': $'.number_format($cliente->getSaldo(), 2).')';
+    }
+
     public function pagar(Compra $compra, Cliente $cliente): ResultadoPago
     {
         $monto = (float) $compra->getTotal();

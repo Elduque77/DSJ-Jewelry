@@ -6,16 +6,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\PagoFactoryInterface;
 use App\Contracts\PagoInterface;
+use App\Contracts\ResultadoPago;
 use App\Exceptions\PagoException;
+use App\Exceptions\StockInsuficienteException;
+use App\Models\Cliente;
 use App\Models\Compra;
 use App\Models\DetalleCompra;
 use App\Models\Producto;
 use App\Services\CarritoService;
-use App\Services\Pagos\PagoFactory;
-use App\Services\Pagos\ResultadoPago;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -26,11 +29,15 @@ class CarritoController extends Controller
 {
     public function __construct(private readonly CarritoService $carrito) {}
 
-    public function index(): View
+    public function index(PagoFactoryInterface $pagos): View
     {
+        $cliente = Auth::guard('cliente')->user();
+
         return view('cliente.carrito', [
             'lineas' => $this->carrito->obtenerLineas(),
             'total' => $this->carrito->calcularTotal(),
+            'metodosPago' => $cliente ? $pagos->opciones($cliente) : [],
+            'metodoPredeterminado' => $pagos->predeterminado(),
         ]);
     }
 
@@ -76,9 +83,9 @@ class CarritoController extends Controller
     // Convierte el carrito de sesion en una Compra real: valida stock,
     // congela el precio de cada linea, descuenta inventario y cobra con el
     // metodo elegido. Este metodo solo conoce PagoInterface: la clase
-    // concreta (saldo, cheque...) la entrega PagoFactory. Todo va en una
+    // concreta (saldo, cheque...) la entrega PagoFactoryInterface. Todo va en una
     // sola transaccion: si el pago falla, no queda nada a medias.
-    public function confirmar(Request $request, PagoFactory $pagos): RedirectResponse
+    public function confirmar(Request $request, PagoFactoryInterface $pagos): RedirectResponse
     {
         $datos = $request->validate([
             'metodo_pago' => ['required', Rule::in($pagos->metodosDisponibles())],
@@ -90,15 +97,6 @@ class CarritoController extends Controller
             return back()->with('error', __('messages.cart_empty'));
         }
 
-        foreach ($lineas as $linea) {
-            if ($linea['cantidad'] > $linea['producto']->getStock()) {
-                return back()->with(
-                    'error',
-                    __('messages.insufficient_stock', ['product' => $linea['producto']->getNombre()])
-                );
-            }
-        }
-
         $cliente = Auth::guard('cliente')->user();
         $pago = $pagos->crear($datos['metodo_pago']);
 
@@ -106,32 +104,41 @@ class CarritoController extends Controller
             $resultado = DB::transaction(function () use ($lineas, $cliente, $pago): ResultadoPago {
                 return $this->registrarCompra($lineas, $cliente, $pago);
             });
-        } catch (PagoException $excepcion) {
+        } catch (PagoException|StockInsuficienteException $excepcion) {
             return back()->with('error', $excepcion->getMessage());
         }
 
         $this->carrito->vaciar();
 
-        if ($resultado->urlDocumento !== null) {
-            return redirect()->to($resultado->urlDocumento);
-        }
-
-        return redirect()->route('home')->with('mensaje', $resultado->mensaje);
+        return redirect()->route('home')
+            ->with('mensaje', $resultado->mensaje)
+            ->with('documento', $resultado->urlDocumento);
     }
 
-    private function registrarCompra($lineas, $cliente, PagoInterface $pago): ResultadoPago
+    private function registrarCompra(Collection $lineas, Cliente $cliente, PagoInterface $pago): ResultadoPago
     {
         $compra = Compra::crearCompra($cliente->getIdCliente());
 
         foreach ($lineas as $linea) {
+            // Se relee el producto bloqueando su fila: el stock se valida y se
+            // descuenta dentro de la transaccion, asi dos compras simultaneas
+            // no pueden vender la misma unidad.
+            $producto = Producto::lockForUpdate()->findOrFail($linea['producto']->getIdProducto());
+
+            if ($linea['cantidad'] > $producto->getStock()) {
+                throw new StockInsuficienteException(
+                    __('messages.insufficient_stock', ['product' => $producto->getNombre()])
+                );
+            }
+
             $detalle = new DetalleCompra;
-            $detalle->setIdProducto($linea['producto']->getIdProducto());
+            $detalle->setIdProducto($producto->getIdProducto());
             $detalle->setCantidad($linea['cantidad']);
-            $detalle->setPrecioUnitario($linea['producto']->getPrecio());
+            $detalle->setPrecioUnitario($producto->getPrecio());
 
             $compra->agregarDetalle($detalle);
 
-            $linea['producto']->actualizarStock($linea['cantidad']);
+            $producto->actualizarStock($linea['cantidad']);
         }
 
         return $pago->pagar($compra, $cliente);

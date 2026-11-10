@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
+use App\Models\Categoria;
 use App\Models\Personalizacion;
 use App\Models\Producto;
 use App\Models\Resena;
-use App\Models\Categoria;
 use Illuminate\Database\Eloquent\Collection;
 use PHPUnit\Framework\TestCase;
 

@@ -83,6 +83,7 @@ return [
     'insufficient_balance' => 'You do not have enough balance to pay for this purchase.',
     'payment_method_invalid' => 'The payment method is not valid.',
     'cheque_generated' => 'Cheque generated. Your purchase stays pending until it is cashed.',
+    'view_document' => 'View cheque (PDF)',
     'cheque_title' => 'Cheque',
     'cheque_number' => 'Cheque number',
     'cheque_pay_to' => 'Pay to the order of',

@@ -7,6 +7,7 @@
 namespace App\Services\Pagos;
 
 use App\Contracts\PagoInterface;
+use App\Contracts\ResultadoPago;
 use App\Models\Cliente;
 use App\Models\Compra;
 
@@ -16,6 +17,11 @@ use App\Models\Compra;
  */
 class PagoConCheque implements PagoInterface
 {
+    public function etiqueta(Cliente $cliente): string
+    {
+        return __('messages.pay_with_cheque');
+    }
+
     public function pagar(Compra $compra, Cliente $cliente): ResultadoPago
     {
         return new ResultadoPago(

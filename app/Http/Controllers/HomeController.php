@@ -78,8 +78,7 @@ class HomeController extends Controller
         Collection $productos,
         string $busqueda,
         ?array $recomendacion = null,
-    ): View
-    {
+    ): View {
         return view('cliente.home', [
             'productos' => $productos,
             'busqueda' => $busqueda,

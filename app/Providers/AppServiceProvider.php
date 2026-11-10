@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use App\Contracts\PagoInterface;
-use App\Services\Pagos\PagoConSaldo;
+use App\Contracts\GeneradorPdfInterface;
+use App\Contracts\PagoFactoryInterface;
+use App\Services\Pagos\PagoFactory;
+use App\Services\Pdf\DompdfGenerador;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,9 +16,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Inversion de dependencias: quien pida PagoInterface sin elegir metodo
-        // recibe PagoConSaldo. Los metodos elegibles viven en config/pagos.php.
-        $this->app->bind(PagoInterface::class, PagoConSaldo::class);
+        // Inversion de dependencias: aqui se decide que implementacion concreta
+        // recibe quien pida cada contrato. Cambiar de libreria de PDF o de
+        // estrategia para elegir el pago es cambiar solo estas lineas.
+        $this->app->bind(PagoFactoryInterface::class, PagoFactory::class);
+        $this->app->bind(GeneradorPdfInterface::class, DompdfGenerador::class);
     }
 
     /**

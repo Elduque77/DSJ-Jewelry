@@ -11,8 +11,8 @@ use App\Models\Categoria;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
 class ProductoController extends Controller
 {
@@ -71,7 +71,7 @@ class ProductoController extends Controller
 
         $producto->fill($datos);
         if ($request->hasFile('imagen')) {
-            if ($producto->getImagen() && !$producto->usaImagenPredeterminada()) {
+            if ($producto->getImagen() && ! $producto->usaImagenPredeterminada()) {
                 Storage::disk('public')->delete($producto->getImagen());
             }
             $producto->setImagen($request->file('imagen')->store('products', 'public'));
@@ -84,7 +84,7 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto): RedirectResponse
     {
-        if ($producto->getImagen() && !$producto->usaImagenPredeterminada()) {
+        if ($producto->getImagen() && ! $producto->usaImagenPredeterminada()) {
             Storage::disk('public')->delete($producto->getImagen());
         }
         $producto->delete();

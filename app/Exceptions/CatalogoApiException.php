@@ -4,6 +4,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-class CatalogoApiException extends RuntimeException
-{
-}
+class CatalogoApiException extends RuntimeException {}

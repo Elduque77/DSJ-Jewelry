@@ -47,9 +47,12 @@ class PagoCompraTest extends TestCase
 
         $this->actingAs($cliente, 'cliente')
             ->withSession(['carrito' => [$producto->getIdProducto() => 1]])
-            ->post(route('carrito.confirmar'), ['metodo_pago' => 'cheque']);
+            ->post(route('carrito.confirmar'), ['metodo_pago' => 'cheque'])
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('mensaje', __('messages.cheque_generated'));
 
         $compra = Compra::firstOrFail();
+        $this->assertSame(route('compra.cheque', $compra->getIdCompra()), session('documento'));
         $this->assertSame('pendiente', $compra->getEstado());
         $this->assertSame(1000.0, $cliente->fresh()->getSaldo());
 
@@ -82,6 +85,34 @@ class PagoCompraTest extends TestCase
             ->assertSessionHasErrors('metodo_pago');
 
         $this->assertDatabaseCount('compras', 0);
+    }
+
+    public function test_stock_insuficiente_no_crea_la_compra_ni_cobra(): void
+    {
+        [$cliente, $producto] = $this->escenario(saldo: 1000);
+
+        $this->actingAs($cliente, 'cliente')
+            ->withSession(['carrito' => [$producto->getIdProducto() => 6]])
+            ->post(route('carrito.confirmar'), ['metodo_pago' => 'saldo'])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('compras', 0);
+        $this->assertSame(1000.0, $cliente->fresh()->getSaldo());
+        $this->assertSame(5, $producto->fresh()->getStock());
+    }
+
+    public function test_el_carrito_muestra_los_metodos_de_pago_configurados(): void
+    {
+        [$cliente, $producto] = $this->escenario(saldo: 1000);
+
+        $this->actingAs($cliente, 'cliente')
+            ->withSession(['carrito' => [$producto->getIdProducto() => 1]])
+            ->get(route('carrito.index'))
+            ->assertOk()
+            ->assertSee('value="saldo"', false)
+            ->assertSee('value="cheque"', false)
+            ->assertSee(__('messages.pay_with_balance'))
+            ->assertSee(__('messages.pay_with_cheque'));
     }
 
     private function escenario(float $saldo): array
