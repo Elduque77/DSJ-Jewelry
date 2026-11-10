@@ -1,6 +1,6 @@
 {{-- Autor: Samuel Correa Velasquez (Desarrollador) --}}
 <!doctype html>
-<html lang="es">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -26,27 +26,33 @@
 <body>
     <nav class="site-nav">
         <a href="{{ route('home') }}">DSJ Jewelry</a>
+        <a href="{{ route('carniceria.index') }}">Carnicería aliada</a>
         @auth('admin')
-            <a href="{{ route('admin.dashboard') }}">Dashboard</a>
-            <a href="{{ route('admin.categoria.index') }}">Categorías</a>
-            <a href="{{ route('admin.producto.index') }}">Productos</a>
+            <a href="{{ route('admin.dashboard') }}">{{ __('messages.admin_panel') }}</a>
+            <a href="{{ route('admin.categoria.index') }}">{{ __('messages.categories') }}</a>
+            <a href="{{ route('admin.producto.index') }}">{{ __('messages.products') }}</a>
             <form method="POST" action="{{ route('admin.logout') }}" style="display:inline;padding:0;background:none">
-                @csrf <button type="submit">Cerrar sesión</button>
+                @csrf <button type="submit">{{ __('messages.logout') }}</button>
             </form>
         @else
-            <a href="{{ route('admin.login') }}">Administración</a>
+            <a href="{{ route('admin.login') }}">{{ __('messages.admin') }}</a>
         @endauth
         @if (!auth('admin')->check())
-            <a href="{{ route('carrito.index') }}">Carrito</a>
+            <a href="{{ route('carrito.index') }}">{{ __('messages.cart') }}</a>
             @auth('cliente')
                 <form method="POST" action="{{ route('cliente.logout') }}" style="display:inline;padding:0;background:none">
-                    @csrf <button type="submit">Cerrar sesión</button>
+                    @csrf <button type="submit">{{ __('messages.logout') }}</button>
                 </form>
             @else
-                <a href="{{ route('cliente.login') }}">Iniciar sesión</a>
-                <a href="{{ route('cliente.registro') }}">Registrarse</a>
+                <a href="{{ route('cliente.login') }}">{{ __('messages.login') }}</a>
+                <a href="{{ route('cliente.registro') }}">{{ __('messages.register') }}</a>
             @endauth
         @endif
+        <div class="language-switcher" aria-label="{{ __('messages.language') }}">
+            <span>{{ __('messages.language') }}:</span>
+            <a href="{{ route('locale.update', 'es') }}" hreflang="es">ES</a>
+            <a href="{{ route('locale.update', 'en') }}" hreflang="en">EN</a>
+        </div>
     </nav>
     <main class="site-main">
         @if (session('mensaje')) <p class="success">{{ session('mensaje') }}</p> @endif

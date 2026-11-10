@@ -32,14 +32,24 @@ class CarritoController extends Controller
     public function agregar(Request $request, Producto $producto): RedirectResponse
     {
         $cantidad = max(1, (int) $request->input('cantidad', 1));
+        $ancla = preg_match('/^(producto|recomendacion-producto)-\d+$/', (string) $request->input('ancla'))
+            ? $request->input('ancla')
+            : null;
 
         try {
             $this->carrito->agregar($producto->getIdProducto(), $cantidad);
         } catch (InvalidArgumentException $excepcion) {
-            return back()->with('error', $excepcion->getMessage());
+            return $this->redireccionarAlProducto($ancla)
+                ->with('error', $excepcion->getMessage());
         }
 
-        return back()->with('mensaje', 'Producto agregado al carrito.');
+        return $this->redireccionarAlProducto($ancla)
+            ->with('mensaje', __('messages.product_added'));
+    }
+
+    private function redireccionarAlProducto(?string $ancla): RedirectResponse
+    {
+        return redirect()->to(route('home').($ancla ? '#'.$ancla : ''));
     }
 
     public function actualizar(Request $request, Producto $producto): RedirectResponse
@@ -48,14 +58,14 @@ class CarritoController extends Controller
 
         $this->carrito->actualizarCantidad($producto->getIdProducto(), $cantidad);
 
-        return back()->with('mensaje', 'Carrito actualizado.');
+        return back()->with('mensaje', __('messages.cart_updated'));
     }
 
     public function eliminar(Producto $producto): RedirectResponse
     {
         $this->carrito->eliminar($producto->getIdProducto());
 
-        return back()->with('mensaje', 'Producto eliminado del carrito.');
+        return back()->with('mensaje', __('messages.product_removed'));
     }
 
     // Convierte el carrito de sesion en una Compra real: valida stock,
@@ -66,14 +76,14 @@ class CarritoController extends Controller
         $lineas = $this->carrito->obtenerLineas();
 
         if ($lineas->isEmpty()) {
-            return back()->with('error', 'Tu carrito esta vacio.');
+            return back()->with('error', __('messages.cart_empty'));
         }
 
         foreach ($lineas as $linea) {
             if ($linea['cantidad'] > $linea['producto']->getStock()) {
                 return back()->with(
                     'error',
-                    'No hay suficiente stock de "'.$linea['producto']->getNombre().'".'
+                    __('messages.insufficient_stock', ['product' => $linea['producto']->getNombre()])
                 );
             }
         }
@@ -99,6 +109,6 @@ class CarritoController extends Controller
 
         $this->carrito->vaciar();
 
-        return redirect()->route('home')->with('mensaje', '¡Compra confirmada! Gracias por tu pedido.');
+        return redirect()->route('home')->with('mensaje', __('messages.purchase_confirmed'));
     }
 }

@@ -12,6 +12,7 @@ use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
@@ -44,10 +45,14 @@ class ProductoController extends Controller
 
         $producto = new Producto;
         $producto->fill($datos);
+        $producto->setImagen(
+            $request->file('imagen')?->store('products', 'public')
+            ?? Producto::IMAGEN_PREDETERMINADA,
+        );
         $producto->save();
 
         return redirect()->route('admin.producto.index')
-            ->with('mensaje', 'Producto creado correctamente.');
+            ->with('mensaje', __('messages.product_created'));
     }
 
     public function edit(Producto $producto): View
@@ -65,18 +70,27 @@ class ProductoController extends Controller
         $datos = $this->validarDatos($request);
 
         $producto->fill($datos);
+        if ($request->hasFile('imagen')) {
+            if ($producto->getImagen() && !$producto->usaImagenPredeterminada()) {
+                Storage::disk('public')->delete($producto->getImagen());
+            }
+            $producto->setImagen($request->file('imagen')->store('products', 'public'));
+        }
         $producto->save();
 
         return redirect()->route('admin.producto.index')
-            ->with('mensaje', 'Producto actualizado correctamente.');
+            ->with('mensaje', __('messages.product_updated'));
     }
 
     public function destroy(Producto $producto): RedirectResponse
     {
+        if ($producto->getImagen() && !$producto->usaImagenPredeterminada()) {
+            Storage::disk('public')->delete($producto->getImagen());
+        }
         $producto->delete();
 
         return redirect()->route('admin.producto.index')
-            ->with('mensaje', 'Producto eliminado correctamente.');
+            ->with('mensaje', __('messages.product_deleted'));
     }
 
     private function validarDatos(Request $request): array
@@ -88,6 +102,7 @@ class ProductoController extends Controller
             'material' => ['required', 'string', 'max:100'],
             'precio' => ['required', 'numeric', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
+            'imagen' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
     }
 }
